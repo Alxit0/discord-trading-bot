@@ -36,7 +36,7 @@ async def history(ctx: commands.Context, name: str, range: str='6m'):
     """Gives the history of a stock of 6 months"""
     
     # Get historical prices for the last 6 months
-    historical_data = get_historical_prices(name, range)
+    historical_data = await get_historical_prices(name, range)
     
     if historical_data is None:
         await ctx.send(f"I don't have that info about `{name}`.\nCheck if the symbol is right.")

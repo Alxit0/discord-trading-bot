@@ -1,9 +1,12 @@
+from datetime import timedelta
 import json
 from pprint import pprint
 import time
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+
+from utils import rate_limit
 
 # site: https://iexcloud.io/console/home
 
@@ -13,11 +16,16 @@ api_token = 'pk_94d2a1406fc54d87bc302f13c3c84037'
 # Define the base URL for the IEX Cloud API
 base_url = 'https://cloud.iexapis.com/stable'
 
+@rate_limit(limit=5, per=timedelta(seconds=1))
+async def _bottleneck_request(url: str):
+    return requests.get(url)
+
+
 # Function to get historical prices
-def get_historical_prices(symbol, range):
+async def get_historical_prices(symbol, range):
     endpoint = f'/stock/{symbol}/chart/{range}'
     url = f'{base_url}{endpoint}?token={api_token}'
-    response = requests.get(url)
+    response = await _bottleneck_request(url)
     data = response.json()
     
     if data == []:
@@ -35,10 +43,10 @@ def get_historical_prices(symbol, range):
     return df
 
 # Function to get real-time quote
-def get_real_time_quote(symbol):
+async def get_real_time_quote(symbol):
     endpoint = f'/stock/{symbol}/quote'
     url = f'{base_url}{endpoint}?token={api_token}'
-    response = requests.get(url)
+    response = await _bottleneck_request(url)
     data = response.json()
     return data
 
