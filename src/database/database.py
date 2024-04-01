@@ -7,6 +7,7 @@ from .guild import Guild, GuildEncoder
 
 class InMemoryDatabase:
     def __init__(self, data_json_path: str):
+        self.file_path = data_json_path
         self.data = self._load_data(data_json_path)
     
     def _load_data(self, file_path) -> Dict[str, Guild]:
@@ -19,8 +20,8 @@ class InMemoryDatabase:
 
         return resp
     
-    def save_data(self, file_path):
-        with open(file_path, 'w') as f:
+    def save_data(self):
+        with open(self.file_path, 'w') as f:
             json.dump(self.data, f, indent=4, cls=GuildEncoder)
 
     def display_all(self):
