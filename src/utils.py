@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from functools import wraps
+import os
 from discord.ext import commands
 
 def only_users_allowed():
@@ -32,3 +33,9 @@ def rate_limit(limit: int, per: timedelta):
         return wrapper
 
     return decorator
+
+
+def default_data_file(file_path):
+    if not os.path.isfile(file_path):
+        with open(file_path, 'x') as f:
+            f.write("{}")

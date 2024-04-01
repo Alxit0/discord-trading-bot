@@ -162,3 +162,4 @@ cython_debug/
 # costum stuff
 */*.out
 symbols.json
+*/data.json

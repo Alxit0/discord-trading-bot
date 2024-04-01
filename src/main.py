@@ -1,12 +1,13 @@
 import atexit
 import io
+import os
 import discord
 from discord.ext import commands
 import matplotlib.pyplot as plt
 
 from creds import *
 from stock_api import get_historical_prices
-from utils import only_users_allowed
+from utils import default_data_file, only_users_allowed
 from database.database import InMemoryDatabase
 
 
@@ -79,7 +80,10 @@ def save_data_on_exit():
 def main():
     global db
     
-    db = InMemoryDatabase('./data.json')
+    data_file = "./data.json"
+    default_data_file(data_file)
+
+    db = InMemoryDatabase(data_file)
     atexit.register(save_data_on_exit)
     client.run(BOT_TOKEN)
 
