@@ -52,7 +52,7 @@ async def stock(ctx: commands.Context, name: str, range: str='6mo'):
     buffer.seek(0)
     
     # Create and send the embedded message with the graph image attached
-    embed = discord.Embed(title="Tesla, Inc.",
+    embed = discord.Embed(title=stock_data.name,
                       colour=0x0076f5,
                       timestamp=datetime.now())
 

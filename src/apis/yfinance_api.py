@@ -10,6 +10,9 @@ async def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
     info = stock.info
     hist = stock.history(period=range)
 
+    if hist.empty:
+        return None
+
     if verbose:
         print(hist)
 
