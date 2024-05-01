@@ -6,8 +6,8 @@ from discord.ext import commands
 import matplotlib.pyplot as plt
 
 from creds import *
-from stock_api import get_stock_data
-from utils import default_data_file, only_users_allowed
+from apis.yfinance_api import get_stock_data
+from utils import default_data_file, only_users_allowed, build_history_graph
 from database.database import InMemoryDatabase
 
 
@@ -43,29 +43,11 @@ async def stock(ctx: commands.Context, name: str, range: str='6m'):
         await ctx.send(f"I don't have that info about `{name}`.\nCheck if the symbol is right.")
         return
     
-    historical_data = stock_data.history
-    
-    # Plotting the graph
-    fig, ax = plt.subplots(figsize=(10, 6))
-    fig.set_facecolor("#282b30")
-    ax.patch.set_facecolor("#282b30")  # Set background color for the graph area
-    ax.plot(historical_data.index, historical_data['close'], color='#7289da', linestyle='-', linewidth=2.0)
-    ax.set_xlabel('Date', color='white')  # Set x-axis label color
-    ax.set_ylabel('Price (USD)', color='white')  # Set y-axis label color
-    ax.tick_params(axis='x', colors='white')  # Set x-axis tick color
-    ax.tick_params(axis='y', colors='white')  # Set y-axis tick color
-    ax.grid(color='darkgray') # Set grid color
-    ax.spines['top'].set_color('white')  # Set color of the top spine
-    ax.spines['bottom'].set_color('white')  # Set color of the bottom spine
-    ax.spines['left'].set_color('white')  # Set color of the left spine
-    ax.spines['right'].set_color('white')  # Set color of the right spine
-    plt.xticks(rotation=-45, ha='left') # Rotate x-axis labels diagonally
-    plt.tight_layout() # Adjust layout to accommodate rotated labels
+    build_history_graph(stock_data)
     
     # Convert the plot to bytes
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
-    plt.close(fig)
     buffer.seek(0)
     
     # Create and send the embedded message with the graph image attached

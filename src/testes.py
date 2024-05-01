@@ -1,4 +1,7 @@
 
+import asyncio
+
+
 def teste_database():
     from database.database import InMemoryDatabase
     file_path = "./data.json"
@@ -29,10 +32,24 @@ def teste_database_get_new_user():
     
     print("Database OK.")
 
+def teste_generate_stock_graph():
+    from apis.yfinance_api import get_stock_data
+    from matplotlib import pyplot as plt
+    from utils import build_history_graph
+
+    symbol = 'AAPL'
+    
+    # Get historical prices for the last year
+    stock = asyncio.run(get_stock_data(symbol, '6mo'))
+    
+    build_history_graph(stock)
+    
+    plt.show()
 
 def main():
     # teste_database()
-    teste_database_get_new_user()
+    # teste_database_get_new_user()
+    teste_generate_stock_graph()
 
 if __name__ == '__main__':
     main()
