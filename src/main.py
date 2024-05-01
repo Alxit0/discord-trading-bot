@@ -6,7 +6,7 @@ from discord.ext import commands
 import matplotlib.pyplot as plt
 
 from creds import *
-from stock_api import get_historical_prices
+from stock_api import get_stock_data
 from utils import default_data_file, only_users_allowed
 from database.database import InMemoryDatabase
 
@@ -33,17 +33,19 @@ async def profile(ctx: commands.Context):
 
 @client.command()
 @only_users_allowed()
-async def history(ctx: commands.Context, name: str, range: str='6m'):
-    """Gives the history of a stock of 6 months"""
+async def stock(ctx: commands.Context, name: str, range: str='6m'):
+    """Gives the info and history of a stock for the past 6 months"""
     
     # Get historical prices for the last 6 months
-    historical_data = await get_historical_prices(name, range)
+    stock_data = await get_stock_data(name, range)
     
-    if historical_data is None:
+    if stock_data is None:
         await ctx.send(f"I don't have that info about `{name}`.\nCheck if the symbol is right.")
         return
     
-    # Plotting the graph with a darker background inside
+    historical_data = stock_data.history
+    
+    # Plotting the graph
     fig, ax = plt.subplots(figsize=(10, 6))
     fig.set_facecolor("#282b30")
     ax.patch.set_facecolor("#282b30")  # Set background color for the graph area
@@ -60,9 +62,10 @@ async def history(ctx: commands.Context, name: str, range: str='6m'):
     plt.xticks(rotation=-45, ha='left') # Rotate x-axis labels diagonally
     plt.tight_layout() # Adjust layout to accommodate rotated labels
     
-   # Convert the plot to bytes
+    # Convert the plot to bytes
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
+    plt.close(fig)
     buffer.seek(0)
     
     # Create and send the embedded message with the graph image attached

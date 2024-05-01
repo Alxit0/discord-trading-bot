@@ -1,65 +1,71 @@
-from datetime import timedelta
-import json
+import asyncio
+from datetime import datetime, timedelta
 from pprint import pprint
-import time
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from utils import rate_limit
+from utils import Stock, rate_limit, calculate_start_date
+from creds import API_TOKEN
 
-# site: https://iexcloud.io/console/home
-
-# Replace 'YOUR_API_TOKEN' with your actual IEX Cloud API token
-api_token = 'pk_94d2a1406fc54d87bc302f13c3c84037'
+# site: https://twelvedata.com/account/api-playground
 
 # Define the base URL for the IEX Cloud API
-base_url = 'https://cloud.iexapis.com/stable'
+base_url = 'https://api.twelvedata.com'
 
 @rate_limit(limit=5, per=timedelta(seconds=1))
-async def _bottleneck_request(url: str):
+def _bottleneck_request(url: str):
     return requests.get(url)
 
 
 # Function to get historical prices
-async def get_historical_prices(symbol, range):
-    endpoint = f'/stock/{symbol}/chart/{range}'
-    url = f'{base_url}{endpoint}?token={api_token}'
-    response = await _bottleneck_request(url)
+async def get_stock_data(symbol, range='6m') -> Stock:
+    start_date = calculate_start_date(range).strftime('%Y-%m-%d')
+    endpoint = f'/time_series?symbol={symbol}&interval=4h&start_date={start_date}&format=json'
+    url = f'{base_url}{endpoint}&apikey={API_TOKEN}'
+    response = requests.get(url)
     data = response.json()
     
-    if data == []:
+    if 'status' in data and data['status'] == 'error':
+        print(f"Error: {data['message']}")
         return None
     
-    # Convert data to DataFrame
-    df = pd.DataFrame(data)
-    
-    # Convert 'date' column to datetime
-    df['date'] = pd.to_datetime(df['date'])
-    
-    # Set 'date' column as index
-    df.set_index('date', inplace=True)
-    
-    return df
+    meta = data['meta']
+    hist = data['values']
 
-# Function to get real-time quote
-async def get_real_time_quote(symbol):
-    endpoint = f'/stock/{symbol}/quote'
-    url = f'{base_url}{endpoint}?token={api_token}'
-    response = await _bottleneck_request(url)
-    data = response.json()
-    return data
+    if hist == []:
+        return None
+    
+    # Extract relevant data
+    relevant_data = [{'datetime': entry['datetime'], 'close': entry['close']} for entry in data['values']]
+    
+    # Create DataFrame with relevant data
+    df = pd.DataFrame(relevant_data)
+    
+    # Convert 'datetime' column to datetime
+    df['datetime'] = pd.to_datetime(df['datetime'])
+    df['close'] = pd.to_numeric(df['close'], errors='coerce')
+    
+    # Set 'datetime' column as index
+    df.set_index('datetime', inplace=True)
+    
+    return Stock(meta['symbol'], meta['currency'], meta['exchange'], df)
 
 
 def main():
     # Example usage
-    symbol = 'APPL'
+    symbol = 'TSLA'
 
-    def history_price():
+    async def history_price():
         # Get historical prices for the last year
-        historical_data = get_historical_prices(symbol, '2m')
+        stock = await get_stock_data(symbol, '1m')
 
-        # Plotting the graph with a darker background inside
+        historical_data = stock.history
+        print(historical_data)
+
+        historical_data.to_csv('./temp.csv')
+        
+        # Plotting the graph
         fig, ax = plt.subplots(figsize=(10, 6))
         fig.set_facecolor("#282b30")
         ax.patch.set_facecolor("#282b30")  # Set background color for the graph area
@@ -81,24 +87,9 @@ def main():
         # Adjust layout to accommodate rotated labels
         plt.tight_layout()
         plt.show()
+    
+    asyncio.run(history_price())
 
-    def cur_price():
-        # Get real-time quote
-        a = time.time()
-        real_time_quote = get_real_time_quote(symbol)
-        print("\nReal-Time Quote:")
-        print(time.time()-a, 's')
-        pprint(real_time_quote['close'])
-    
-    def all_symbols():
-        url = f"https://cloud.iexapis.com/stable/data/CORE/REF_DATA_IEX_SYMBOLS?token={api_token}"
-        response = requests.get(url)
-        data = response.json()
-        with open("./symbols.json", "w") as file:
-            json.dump(data, file, indent=4)
-    
-    all_symbols()
-        
 
 if __name__ == '__main__':
     main()
