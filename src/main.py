@@ -52,19 +52,11 @@ async def stock(ctx: commands.Context, name: str, range: str='6mo'):
     buffer.seek(0)
     
     # Create and send the embedded message with the graph image attached
-    embed = discord.Embed(title=stock_data.name,
-                      colour=0x0076f5,
-                      timestamp=datetime.now())
+    embed = discord.Embed(title=stock_data.name, colour=0x0076f5, timestamp=datetime.now())
 
-    embed.add_field(name="Symbol",
-                    value=stock_data.symbol,
-                    inline=True)
-    embed.add_field(name="Current Price",
-                    value=stock_data.value,
-                    inline=True)
-    embed.add_field(name="Currency",
-                    value=stock_data.currency,
-                    inline=True)
+    embed.add_field(name="Symbol", value=stock_data.symbol, inline=True)
+    embed.add_field(name="Current Price", value=stock_data.value, inline=True)
+    embed.add_field(name="Currency", value=stock_data.currency, inline=True)
 
     embed.set_thumbnail(url=stock_data.image_url())
 

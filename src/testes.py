@@ -52,7 +52,7 @@ def teste_stock_logo():
     from PIL import Image
     from io import BytesIO
 
-    symbol = 'MSFT'
+    symbol = 'OGC'
 
     # Make a request to the Clearbit Logo API
     response = requests.get(f'https://trading212equities.s3.eu-central-1.amazonaws.com/{symbol}.png')
