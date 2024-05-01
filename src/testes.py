@@ -40,7 +40,7 @@ def teste_generate_stock_graph():
     symbol = 'AAPL'
     
     # Get historical prices for the last year
-    stock = asyncio.run(get_stock_data(symbol, '6mo'))
+    stock = asyncio.run(get_stock_data(symbol, '1d', verbose=True))
     
     build_history_graph(stock)
     

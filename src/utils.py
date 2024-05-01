@@ -8,11 +8,15 @@ import pandas as pd
 
 # classes
 class Stock:
-    def __init__(self, symbol: str, name: str, currency: str, history: pd.DataFrame) -> None:
+    def __init__(self, symbol: str, name: str, value: float, currency: str, history: pd.DataFrame) -> None:
         self.symbol = symbol
         self.name = name
+        self.value = value
         self.currency = currency
         self.history = history
+    
+    def image_url(self):
+        return f"https://trading212equities.s3.eu-central-1.amazonaws.com/{self.symbol}.png"
 
 # decorators
 def only_users_allowed():

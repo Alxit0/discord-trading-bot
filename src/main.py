@@ -1,4 +1,5 @@
 import atexit
+from datetime import datetime
 import io
 import os
 import discord
@@ -33,7 +34,7 @@ async def profile(ctx: commands.Context):
 
 @client.command()
 @only_users_allowed()
-async def stock(ctx: commands.Context, name: str, range: str='6m'):
+async def stock(ctx: commands.Context, name: str, range: str='6mo'):
     """Gives the info and history of a stock for the past 6 months"""
     
     # Get historical prices for the last 6 months
@@ -51,9 +52,25 @@ async def stock(ctx: commands.Context, name: str, range: str='6m'):
     buffer.seek(0)
     
     # Create and send the embedded message with the graph image attached
-    embed = discord.Embed(title=f'Historical Prices for {name}')
+    embed = discord.Embed(title="Tesla, Inc.",
+                      colour=0x0076f5,
+                      timestamp=datetime.now())
+
+    embed.add_field(name="Symbol",
+                    value=stock_data.symbol,
+                    inline=True)
+    embed.add_field(name="Current Price",
+                    value=stock_data.value,
+                    inline=True)
+    embed.add_field(name="Currency",
+                    value=stock_data.currency,
+                    inline=True)
+
+    embed.set_thumbnail(url=stock_data.image_url())
+
     file = discord.File(buffer, filename='graph.png')
     embed.set_image(url='attachment://graph.png')
+
     await ctx.send(embed=embed, file=file)
 
 
