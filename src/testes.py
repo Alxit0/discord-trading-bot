@@ -46,10 +46,36 @@ def teste_generate_stock_graph():
     
     plt.show()
 
+def teste_stock_logo():
+    import requests
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    from io import BytesIO
+
+    symbol = 'MSFT'
+
+    # Make a request to the Clearbit Logo API
+    response = requests.get(f'https://trading212equities.s3.eu-central-1.amazonaws.com/{symbol}.png')
+
+    # Check if the request was successful
+    print(response.status_code)
+    if response.status_code != 200:
+        print("Logo not found.")
+        return
+    
+    # Plotting the logo
+    img = Image.open(BytesIO(response.content))
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()
+
 def main():
     # teste_database()
     # teste_database_get_new_user()
-    teste_generate_stock_graph()
+    # teste_generate_stock_graph()
+    teste_stock_logo()
+    
+    pass
 
 if __name__ == '__main__':
     main()

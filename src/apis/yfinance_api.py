@@ -8,7 +8,7 @@ async def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
     stock = yf.Ticker(symbol)
 
     info = stock.info
-    hist = stock.history(period=range, interval="5m")
+    hist = stock.history(period=range)
 
     if verbose:
         print(hist)
