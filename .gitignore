@@ -164,3 +164,4 @@ cython_debug/
 symbols.json
 */data.json
 temp*
+.DS_Store
