@@ -2,11 +2,15 @@ import json
 from pprint import pprint
 from typing import Dict
 
+from utils import default_data_file
+
 from .guild import Guild, GuildEncoder
 
 
 class InMemoryDatabase:
     def __init__(self, data_json_path: str):
+        default_data_file(data_json_path)
+        
         self.file_path = data_json_path
         self.data = self._load_data(data_json_path)
     

@@ -1,9 +1,13 @@
 import asyncio
 from datetime import datetime, timedelta
 from functools import wraps
+import io
 import os
+import random
+from typing import List, Tuple
 from discord.ext import commands
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import pandas as pd
 import requests
 
@@ -66,7 +70,16 @@ def rate_limit(limit: int, per: timedelta):
     return decorator
 
 # functions
-def build_history_graph(stock: Stock):
+def build_history_graph(stock: Stock) -> io.BytesIO:
+    """
+    Build a graph of the historical stock data.
+
+    Args:
+        stock (Stock): The stock data.
+
+    Returns:
+        io.BytesIO: A bytes-like object representing the generated plot image.
+    """
     historical_data = stock.history
     
     # Plotting the graph
@@ -85,6 +98,105 @@ def build_history_graph(stock: Stock):
     ax.spines['right'].set_color('white')  # Set color of the right spine
     plt.xticks(rotation=-45, ha='left') # Rotate x-axis labels diagonally
     plt.tight_layout() # Adjust layout to accommodate rotated labels
+
+    # Convert the plot to bytes
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    
+    return buffer
+
+def plot_stock_positions_smipie(positions: List[Tuple[str, float]]) -> io.BytesIO:
+    """
+    Plot a pie chart of stock positions with random colors.
+
+    Args:
+        positions (List[Tuple[str, float]]): A list of tuples containing stock symbols and their positions.
+
+    Returns:
+        io.BytesIO: A bytes-like object representing the generated plot image.
+    """
+
+    def generate_random_colors(num_colors: int) -> List[str]:
+        """
+        Generate a list of random colors using Matplotlib's color maps.
+
+        Args:
+            num_colors (int): Number of colors to generate.
+
+        Returns:
+            List[str]: List of random hex color codes.
+        """
+        cmap = plt.get_cmap('tab10')  # Choose a color map (e.g., 'tab10')
+        colors = [mcolors.to_hex(cmap(random.random())) for _ in range(num_colors)]
+        return colors
+
+    positions.sort(key=lambda x: x[1])
+
+    labels = [i[0] for i in positions]
+    values = [i[1] for i in positions]
+
+    fig, ax = plt.subplots(figsize=(10, 6))  # Set facecolor for the whole figure
+    fig.set_facecolor('#282b30')
+    fig.subplots_adjust(left=0.02, bottom=0.02, right=0.98, top=0.98)
+    ax.patch.set_facecolor("#282b30")
+    
+    ax.pie(
+        values + [sum(values)], 
+        labels=labels + [''],
+        colors=generate_random_colors(len(positions)) + ['#282b30'],
+        textprops={'color': 'white'},
+    )
+    ax.pie([1], colors=['#282b30'], radius=0.8)
+    
+    # Remove spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    # Convert the plot to bytes
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+
+    return buffer
+
+def plot_stock_positions_bar(positions: List[Tuple[str, float]]) -> io.BytesIO:
+    """
+    Plot a bar graph of stock positions.
+
+    Args:
+        positions (Dict[str, float]): A dictionary where keys are stock symbols and values are their positions.
+    """
+    positions.sort(key=lambda x: -x[1])
+
+    labels = [i[0] for i in positions]
+    values = [i[1] for i in positions]
+
+    fig, ax = plt.subplots(figsize=(10, 6))  # Set facecolor for the whole figure
+    fig.set_facecolor("#282b30")
+    ax.patch.set_facecolor("#282b30")
+
+    ax.barh(labels, values, color='#7289da')  # Set the color here
+    ax.set_xlabel('Position Value', color='white')  # Set x-axis label color
+    ax.set_ylabel('Stock Symbol', color='white')  # Set y-axis label color
+    ax.tick_params(axis='x', colors='white')  # Set x-axis tick color
+    ax.tick_params(axis='y', colors='white')  # Set y-axis tick color
+    ax.invert_yaxis()  # To have the largest position at the top
+    
+    # Remove spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    # Convert the plot to bytes
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+
+    return buffer
 
 def default_data_file(file_path):
     if not os.path.isfile(file_path):

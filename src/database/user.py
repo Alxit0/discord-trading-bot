@@ -1,4 +1,5 @@
 import copy
+from typing import List, Tuple
 
 DEFAULT_STATS = {
     "cash": 4000,
@@ -24,7 +25,7 @@ class User:
         self.data['cash'] = value
     
     @property
-    def stocks(self) -> int:
+    def stocks(self) -> List[Tuple[str, float]]:
         if 'stocks' not in self.data:
             self.data['stocks'] = DEFAULT_STATS['stocks']
          

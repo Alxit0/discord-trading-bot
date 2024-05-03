@@ -1,14 +1,13 @@
 import atexit
 from datetime import datetime
 import io
-import os
 import discord
 from discord.ext import commands
 import matplotlib.pyplot as plt
 
 from creds import *
-from apis.yfinance_api import get_stock_data
-from utils import default_data_file, only_users_allowed, build_history_graph
+from apis.yfinance_api import get_stock_data, get_stock_position
+from utils import only_users_allowed, build_history_graph, plot_stock_positions_bar
 from database.database import InMemoryDatabase
 
 
@@ -23,13 +22,28 @@ async def on_ready():
 @client.command()
 @only_users_allowed()
 async def profile(ctx: commands.Context):
-    embeded = discord.Embed(
+    user = db.get_user(ctx.guild.id, ctx.author.id)
+
+    stock_values = get_stock_position(user.stocks)
+
+    graph = plot_stock_positions_bar(stock_values)
+
+    embed = discord.Embed(
         color=discord.Color.dark_teal(),
         title=ctx.author.display_name,
     )
-    embeded.set_thumbnail(url=ctx.author.avatar.url)
+    embed.set_thumbnail(url=ctx.author.avatar.url)
+
+    embed.add_field(name="Portfolio", value=sum(i[1] for i in stock_values), inline=False)
     
-    await ctx.send(embed=embeded)
+    embed.add_field(name="Cash", value=user.cash, inline=True)
+    embed.add_field(name="Invested", value='???', inline=True)
+    embed.add_field(name="Return", value='???? (??%)', inline=True)
+
+    file = discord.File(graph, filename='graph.png')
+    embed.set_image(url='attachment://graph.png')
+    
+    await ctx.send(embed=embed, file=file)
     
 
 @client.command()
@@ -44,12 +58,7 @@ async def stock(ctx: commands.Context, name: str, range: str='6mo'):
         await ctx.send(f"I don't have that info about `{name}`.\nCheck if the symbol is right.")
         return
     
-    build_history_graph(stock_data)
-    
-    # Convert the plot to bytes
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
+    buffer = build_history_graph(stock_data)
     
     # Create and send the embedded message with the graph image attached
     embed = discord.Embed(title=stock_data.name, colour=0x0076f5, timestamp=datetime.now())
@@ -74,11 +83,9 @@ def save_data_on_exit():
 def main():
     global db
     
-    data_file = "./data.json"
-    default_data_file(data_file)
-
-    db = InMemoryDatabase(data_file)
+    db = InMemoryDatabase("./data.json")
     atexit.register(save_data_on_exit)
+    
     client.run(BOT_TOKEN)
 
 if __name__ == '__main__':
