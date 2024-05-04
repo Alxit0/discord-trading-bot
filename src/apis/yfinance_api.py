@@ -1,11 +1,12 @@
 from typing import Dict, List, Tuple
 import pandas as pd
+import requests
 import yfinance as yf
 
 from utils import Stock
 
 # Function to get historical prices
-async def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
+def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
     """
     Retrieve historical stock data for a given symbol.
 
@@ -33,8 +34,11 @@ async def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
 
     df.index = pd.to_datetime(df.index)
     df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
+    
+    
+    currentPrice = info['currentPrice'] if 'currentPrice' in info else info['open'] 
 
-    return Stock(info['symbol'], info['shortName'], info['currentPrice'], info['currency'], df)
+    return Stock(info['symbol'], info['shortName'], currentPrice, info['currency'], df)
 
 def get_stock_position(stocks: List[Tuple[str, float]]) -> List[Tuple[str, float]]:
     """
@@ -57,3 +61,27 @@ def get_stock_position(stocks: List[Tuple[str, float]]) -> List[Tuple[str, float
             positions.append((symbol, current_price * quantity))
 
     return positions
+
+def get_symbol_suggestions(symbol: str) -> List[str]:
+    """
+    Fetches symbol suggestions from Yahoo Finance API based on the provided symbol.
+
+    Args:
+        symbol (str): The symbol to search for.
+
+    Returns:
+        List[str]: A list of symbol suggestions matching the provided symbol.
+                   Returns an empty list if no suggestions are found or if there
+                   was an error in retrieving the suggestions.
+    """
+    
+    req = requests.get(
+        "https://query1.finance.yahoo.com/v1/finance/search",
+        params={"q": symbol, "newsCount": 0},
+        headers={"User-Agent": "python"}
+    )
+
+    if req.status_code != 200:
+        return []
+    
+    return [i['symbol'] for i in req.json().get('quotes', [])]

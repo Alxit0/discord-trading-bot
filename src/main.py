@@ -6,7 +6,7 @@ from discord.ext import commands
 import matplotlib.pyplot as plt
 
 from creds import *
-from apis.yfinance_api import get_stock_data, get_stock_position
+from apis.yfinance_api import get_stock_data, get_stock_position, get_symbol_suggestions
 from utils import only_users_allowed, build_history_graph, plot_stock_positions_bar
 from database.database import InMemoryDatabase
 
@@ -52,10 +52,15 @@ async def stock(ctx: commands.Context, name: str, range: str='6mo'):
     """Gives the info and history of a stock for the past 6 months"""
     
     # Get historical prices for the last 6 months
-    stock_data = await get_stock_data(name, range)
+    stock_data = get_stock_data(name, range)
     
     if stock_data is None:
-        await ctx.send(f"I don't have that info about `{name}`.\nCheck if the symbol is right.")
+        sugestions = get_symbol_suggestions(name)
+        sugestions_str = ' '.join(f"`{i}`" for i in sugestions)
+        
+        await ctx.send(f"I don't have that info about `{name}`.\nCheck if the symbol is right." + 
+                       (f"\nSuggestions: {sugestions_str}" if sugestions_str else ''))
+        
         return
     
     buffer = build_history_graph(stock_data)
