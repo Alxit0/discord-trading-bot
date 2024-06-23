@@ -129,7 +129,7 @@ class BuyGroup(app_commands.Group):
 
         
         # construct message
-        embed = discord.Embed()
+        embed = discord.Embed(title="Buy ticket")
 
         embed.add_field(name="Symbol", value=symbol, inline=True)
         embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
@@ -159,7 +159,7 @@ class BuyGroup(app_commands.Group):
         
         
         # construct message
-        embed = discord.Embed()
+        embed = discord.Embed(title="Buy ticket")
 
         embed.add_field(name="Symbol", value=symbol, inline=True)
         embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
@@ -167,8 +167,67 @@ class BuyGroup(app_commands.Group):
         embed.add_field(name="Total", value=f"{quantity * stock_current_value} $", inline=False)
         
         await iter.response.send_message(embed=embed)
+
+
+class SellGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="sell", description="Sell stock with specified mode")
+
+    @app_commands.command(name="price", description="Sell by price")
+    @app_commands.describe(
+        symbol="The stock symbol you want to sell",
+        value="The price at which you want to sell the stock"
+    )
+    @only_users_allowed()
+    async def sell_price(self, iter: discord.Interaction, symbol:str, value: float):
+        # get relevant data
+        user = db.get_user(iter.guild_id, iter.user.id)
+        stock_current_value = get_stock_current_value(symbol)
         
+
+        # update values
+        user.cash += value
+        user.stocks[symbol] -= value / stock_current_value
+        
+        # construct message
+        embed = discord.Embed(title="Sell ticket")
+
+        embed.add_field(name="Symbol", value=symbol, inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Sold", value=f"{value} $", inline=True)
+        embed.add_field(name="Total", value=f"{round(value / stock_current_value, 3)} shares", inline=False)
+        
+        await iter.response.send_message(embed=embed)
+
+    @app_commands.command(name="quantity", description="Sell by quantity")
+    @app_commands.describe(
+        symbol="The stock symbol you want to sell",
+        quantity="The quantity of stocks you want to sell"
+    )
+    @only_users_allowed()
+    async def sell_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
+        # get relevant data
+        user = db.get_user(iter.guild_id, iter.user.id)
+        stock_current_value = get_stock_current_value(symbol)
+        
+        
+        # update values
+        user.cash += quantity * stock_current_value
+        user.stocks[symbol] -= quantity
+        
+        
+        # construct message
+        embed = discord.Embed(title="Sell ticket")
+
+        embed.add_field(name="Symbol", value=symbol, inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Shares", value=quantity, inline=True)
+        embed.add_field(name="Total", value=f"{quantity * stock_current_value} $", inline=False)
+        
+        await iter.response.send_message(embed=embed)
+
 client.tree.add_command(BuyGroup())
+client.tree.add_command(SellGroup())
 
 
 def save_data_on_exit():
