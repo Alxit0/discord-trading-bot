@@ -1,5 +1,6 @@
 
 import asyncio
+from pprint import pprint
 
 
 def teste_database():
@@ -8,14 +9,14 @@ def teste_database():
     db = InMemoryDatabase(file_path)
 
     db.display_all()
-    db.save_data("../data.json")
+    db.save_data()
     
     print("Database OK.")
 
 def teste_database_get_new_user():
     from database.database import InMemoryDatabase
     
-    db = InMemoryDatabase(None)
+    db = InMemoryDatabase("./teste.json")
 
     print(db.get_user(1, 2).data['cash'])
     print(db.get_user(2, 3).data['cash'])
@@ -40,7 +41,7 @@ def teste_generate_stock_graph():
     symbol = 'AAPL'
     
     # Get historical prices for the last year
-    stock = asyncio.run(get_stock_data(symbol, '1d', verbose=True))
+    stock = get_stock_data(symbol, '1d', verbose=True)
     
     build_history_graph(stock)
     
@@ -73,7 +74,7 @@ def main():
     # teste_database()
     # teste_database_get_new_user()
     # teste_generate_stock_graph()
-    teste_stock_logo()
+    # teste_stock_logo()
     
     pass
 

@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from creds import *
-from apis.yfinance_api import get_stock_data, get_stock_position, get_symbol_suggestions
+from apis.yfinance_api import *
 from utils import only_users_allowed, build_history_graph, plot_stock_positions_bar
 from database.database import InMemoryDatabase
 
@@ -23,6 +23,7 @@ async def on_ready():
 async def sync(ctx: commands.Context):
     if ctx.author.id != OWNER_ID:
         await ctx.send("Not owner")
+        return
     
     try:
         synced = await client.tree.sync()
@@ -31,6 +32,7 @@ async def sync(ctx: commands.Context):
     except Exception as e:
         await ctx.send("Failled")
         print(e)
+
 
 @client.tree.command(name="profile")
 @only_users_allowed()
@@ -49,7 +51,7 @@ async def profile(ctx: discord.Interaction):
     )
     embed.set_thumbnail(url=ctx.user.avatar.url)
 
-    embed.add_field(name="Portfolio", value=sum(i[1] for i in stock_values), inline=False)
+    embed.add_field(name="Portfolio", value=round(sum(i[1] for i in stock_values), 3), inline=False)
     
     embed.add_field(name="Cash", value=user.cash, inline=True)
     embed.add_field(name="Invested", value='???', inline=True)
@@ -63,8 +65,7 @@ async def profile(ctx: discord.Interaction):
     
 
 @client.tree.command(name="stock")
-@app_commands.describe(name='stock symbol')
-@app_commands.describe(range='graph time range')
+@app_commands.describe(name='stock symbol', range='graph time range')
 @only_users_allowed()
 async def stock(ctx: discord.Interaction, name: str, range: str='6mo'):
     """Gives the info and history of a stock for the past 6 months
@@ -103,10 +104,78 @@ async def stock(ctx: discord.Interaction, name: str, range: str='6mo'):
     await ctx.response.send_message(embed=embed, file=file)
 
 
+class BuyGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="buy", description="Buy stock with specified mode")
+
+    @app_commands.command(name="price", description="Buy by price")
+    @app_commands.describe(
+        symbol="The stock symbol you want to buy",
+        value="The price at which you want to buy the stock"
+    )
+    @only_users_allowed()
+    async def buy_price(self, iter: discord.Interaction, symbol:str, value: float):
+        # get relevant data
+        user = db.get_user(iter.guild_id, iter.user.id)
+        stock_current_value = get_stock_current_value(symbol)
+        
+
+        # update values
+        user.cash -= value
+
+        if symbol not in user.stocks:
+            user.stocks[symbol] = 0
+        user.stocks[symbol] += value / stock_current_value
+
+        
+        # construct message
+        embed = discord.Embed()
+
+        embed.add_field(name="Symbol", value=symbol, inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Spent", value=f"{value} $", inline=True)
+        embed.add_field(name="Total", value=f"{round(value / stock_current_value, 3)} shares", inline=False)
+        
+        await iter.response.send_message(embed=embed)
+
+    @app_commands.command(name="quantity", description="Buy by quantity")
+    @app_commands.describe(
+        symbol="The stock symbol you want to buy",
+        quantity="The quantity of stocks you want to buy"
+    )
+    @only_users_allowed()
+    async def buy_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
+        # get relevant data
+        user = db.get_user(iter.guild_id, iter.user.id)
+        stock_current_value = get_stock_current_value(symbol)
+        
+        
+        # update values
+        user.cash -= quantity * stock_current_value
+
+        if symbol not in user.stocks:
+            user.stocks[symbol] = 0
+        user.stocks[symbol] += quantity
+        
+        
+        # construct message
+        embed = discord.Embed()
+
+        embed.add_field(name="Symbol", value=symbol, inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Shares", value=quantity, inline=True)
+        embed.add_field(name="Total", value=f"{quantity * stock_current_value} $", inline=False)
+        
+        await iter.response.send_message(embed=embed)
+        
+client.tree.add_command(BuyGroup())
+
 
 def save_data_on_exit():
     if db:
         db.save_data()
+    
+    print("Data saved.")
 
 def main():
     global db

@@ -40,7 +40,25 @@ def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
 
     return Stock(info['symbol'], info['shortName'], currentPrice, info['currency'], df)
 
-def get_stock_position(stocks: List[Tuple[str, float]]) -> List[Tuple[str, float]]:
+def get_stock_current_value(symbol: str) -> float:
+    """Get the current value of a stock given its symbol.
+
+    Args:
+        symbol (str): The stock symbol to lookup.
+    
+    Returns:
+        float: The current price of the stock.
+    """
+    
+    stock = yf.Ticker(symbol)
+
+    info = stock.info
+
+    currentPrice = info['currentPrice'] if 'currentPrice' in info else info['open'] 
+
+    return currentPrice
+
+def get_stock_position(stocks: Dict[str, float]) -> List[Tuple[str, float]]:
     """
     Calculate the positions of stocks based on their current prices and quantities.
 
@@ -52,8 +70,8 @@ def get_stock_position(stocks: List[Tuple[str, float]]) -> List[Tuple[str, float
     """
 
     positions = []
-
-    for symbol, quantity in stocks:
+    
+    for symbol, quantity in stocks.items():
         stock = yf.Ticker(symbol)
         info = stock.info
         if 'currentPrice' in info:

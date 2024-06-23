@@ -1,9 +1,9 @@
 import copy
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 DEFAULT_STATS = {
     "cash": 4000,
-    "stocks" : []
+    "stocks" : {}
 }
 
 class User:
@@ -25,7 +25,7 @@ class User:
         self.data['cash'] = value
     
     @property
-    def stocks(self) -> List[Tuple[str, float]]:
+    def stocks(self) -> Dict[str, float]:
         if 'stocks' not in self.data:
             self.data['stocks'] = DEFAULT_STATS['stocks']
          
