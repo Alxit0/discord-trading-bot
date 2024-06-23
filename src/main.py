@@ -36,10 +36,12 @@ async def sync(ctx: commands.Context):
 
 @client.tree.command(name="profile")
 @only_users_allowed()
-async def profile(ctx: discord.Interaction):
+async def profile(iter: discord.Interaction):
     """Gives the profile of a user"""
+    # Acknowledge the interaction immediately
+    await iter.response.defer(ephemeral=True)
     
-    user = db.get_user(ctx.guild.id, ctx.user.id)
+    user = db.get_user(iter.guild.id, iter.user.id)
 
     stock_values = get_stock_position(user.stocks)
 
@@ -47,9 +49,9 @@ async def profile(ctx: discord.Interaction):
 
     embed = discord.Embed(
         color=discord.Color.dark_teal(),
-        title=ctx.user.display_name,
+        title=iter.user.display_name,
     )
-    embed.set_thumbnail(url=ctx.user.avatar.url)
+    embed.set_thumbnail(url=iter.user.avatar.url)
 
     embed.add_field(name="Portfolio", value=round(sum(i[1] for i in stock_values), 3), inline=False)
     
@@ -60,30 +62,34 @@ async def profile(ctx: discord.Interaction):
     file = discord.File(graph, filename='graph.png')
     embed.set_image(url='attachment://graph.png')
     
-    await ctx.response.send_message(embed=embed, file=file)
-    # await ctx.send(embed=embed, file=file)
+    await iter.followup.send(embed=embed, file=file)
     
 
 @client.tree.command(name="stock")
 @app_commands.describe(name='stock symbol', range='graph time range')
 @only_users_allowed()
-async def stock(ctx: discord.Interaction, name: str, range: str='6mo'):
+async def stock(iter: discord.Interaction, name: str, range: str='6mo'):
     """Gives the info and history of a stock for the past 6 months
 
     Args:
         name (str): Stock symbol
         range (str, optional): Graph time range. Defaults to '6mo'.
     """
+    # Acknowledge the interaction immediately
+    await iter.response.defer(ephemeral=True)
     
     # Get historical prices for the last 6 months
     stock_data = get_stock_data(name, range)
     
-    if stock_data is None:
+    if stock_data is None:    
         sugestions = get_symbol_suggestions(name)
         sugestions_str = ' '.join(f"`{i}`" for i in sugestions)
         
-        await ctx.response.send_message(f"I don't have that info about `{name}`.\nCheck if the symbol is right." + 
-                       (f"\nSuggestions: {sugestions_str}" if sugestions_str else ''))
+        await iter.followup.send(
+            f"I don't have that info about `{name}`.\nCheck if the symbol is right." + 
+                (f"\nSuggestions: {sugestions_str}" if sugestions_str else ''),
+            ephemeral=True    
+        )
         
         return
     
@@ -101,7 +107,7 @@ async def stock(ctx: discord.Interaction, name: str, range: str='6mo'):
     file = discord.File(buffer, filename='graph.png')
     embed.set_image(url='attachment://graph.png')
 
-    await ctx.response.send_message(embed=embed, file=file)
+    await iter.followup.send(embed=embed, file=file)
 
 
 class BuyGroup(app_commands.Group):
@@ -115,13 +121,16 @@ class BuyGroup(app_commands.Group):
     )
     @only_users_allowed()
     async def buy_price(self, iter: discord.Interaction, symbol:str, value: float):
+        # Acknowledge the interaction immediately
+        await iter.response.defer(ephemeral=True)
+    
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
         
         # check transation
         if user.cash < value:
-            await iter.response.send_message(f"You cant afford this. You just have **{user.cash} $**.", ephemeral=True)
+            await iter.followup.send(f"You cant afford this. You just have **{user.cash} $**.", ephemeral=True)
             return
 
         # update values
@@ -139,7 +148,7 @@ class BuyGroup(app_commands.Group):
         embed.add_field(name="Spent", value=f"{value} $", inline=True)
         embed.add_field(name="Total", value=f"{round(value / stock_current_value, 3)} shares", inline=False)
         
-        await iter.response.send_message(embed=embed)
+        await iter.followup.send(embed=embed)
 
     @app_commands.command(name="quantity", description="Buy by quantity")
     @app_commands.describe(
@@ -148,13 +157,16 @@ class BuyGroup(app_commands.Group):
     )
     @only_users_allowed()
     async def buy_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
+        # Acknowledge the interaction immediately
+        await iter.response.defer(ephemeral=True)
+        
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
         
         # check transation
         if user.cash < stock_current_value * quantity:
-            await iter.response.send_message(
+            await iter.followup.send(
                 f"You cant afford this. You just have **{user.cash} $** ({round(user.cash/stock_current_value, 3)} stocks of {symbol}).", 
                 ephemeral=True
             )
@@ -175,7 +187,7 @@ class BuyGroup(app_commands.Group):
         embed.add_field(name="Shares", value=quantity, inline=True)
         embed.add_field(name="Total", value=f"{quantity * stock_current_value} $", inline=False)
         
-        await iter.response.send_message(embed=embed)
+        await iter.followup.send(embed=embed)
 
 
 class SellGroup(app_commands.Group):
@@ -189,6 +201,9 @@ class SellGroup(app_commands.Group):
     )
     @only_users_allowed()
     async def sell_price(self, iter: discord.Interaction, symbol:str, value: float):
+        # Acknowledge the interaction immediately
+        await iter.response.defer(ephemeral=True)
+        
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
@@ -196,7 +211,7 @@ class SellGroup(app_commands.Group):
         # check transation
         if symbol not in user.stocks or user.stocks[symbol] < value / stock_current_value:
             current_owned = round(user.stocks.get(symbol, 0) * stock_current_value, 3)
-            await iter.response.send_message(
+            await iter.followup.send(
                 f"You dont have enouth of that stock to complete the transaction. You own **{current_owned} $** of {symbol} stocks", 
                 ephemeral=True
             )
@@ -214,7 +229,7 @@ class SellGroup(app_commands.Group):
         embed.add_field(name="Sold", value=f"{value} $", inline=True)
         embed.add_field(name="Total", value=f"{round(value / stock_current_value, 3)} shares", inline=False)
         
-        await iter.response.send_message(embed=embed)
+        await iter.followup.send(embed=embed)
 
     @app_commands.command(name="quantity", description="Sell by quantity")
     @app_commands.describe(
@@ -223,13 +238,16 @@ class SellGroup(app_commands.Group):
     )
     @only_users_allowed()
     async def sell_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
+        # Acknowledge the interaction immediately
+        await iter.response.defer(ephemeral=True)
+        
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
         
         # check transation
         if symbol not in user.stocks or user.stocks[symbol] < quantity:
-            await iter.response.send_message(
+            await iter.followup.send(
                 f"You dont have enouth of that stock to complete the transaction. You own **{round(user.stocks.get(symbol, 0), 3)}** stocks of {symbol}", 
                 ephemeral=True
             )
@@ -247,7 +265,7 @@ class SellGroup(app_commands.Group):
         embed.add_field(name="Shares", value=quantity, inline=True)
         embed.add_field(name="Total", value=f"{quantity * stock_current_value} $", inline=False)
         
-        await iter.response.send_message(embed=embed)
+        await iter.followup.send(embed=embed)
 
 client.tree.add_command(BuyGroup())
 client.tree.add_command(SellGroup())
