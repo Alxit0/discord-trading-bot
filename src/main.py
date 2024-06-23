@@ -119,6 +119,10 @@ class BuyGroup(app_commands.Group):
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
         
+        # check transation
+        if user.cash < value:
+            await iter.response.send_message(f"You cant afford this. You just have **{user.cash} $**.", ephemeral=True)
+            return
 
         # update values
         user.cash -= value
@@ -127,7 +131,6 @@ class BuyGroup(app_commands.Group):
             user.stocks[symbol] = 0
         user.stocks[symbol] += value / stock_current_value
 
-        
         # construct message
         embed = discord.Embed(title="Buy ticket")
 
@@ -149,6 +152,13 @@ class BuyGroup(app_commands.Group):
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
         
+        # check transation
+        if user.cash < stock_current_value * quantity:
+            await iter.response.send_message(
+                f"You cant afford this. You just have **{user.cash} $** ({round(user.cash/stock_current_value, 3)} stocks of {symbol}).", 
+                ephemeral=True
+            )
+            return
         
         # update values
         user.cash -= quantity * stock_current_value
@@ -156,7 +166,6 @@ class BuyGroup(app_commands.Group):
         if symbol not in user.stocks:
             user.stocks[symbol] = 0
         user.stocks[symbol] += quantity
-        
         
         # construct message
         embed = discord.Embed(title="Buy ticket")
@@ -184,6 +193,14 @@ class SellGroup(app_commands.Group):
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
         
+        # check transation
+        if symbol not in user.stocks or user.stocks[symbol] < value / stock_current_value:
+            current_owned = round(user.stocks.get(symbol, 0) * stock_current_value, 3)
+            await iter.response.send_message(
+                f"You dont have enouth of that stock to complete the transaction. You own **{current_owned} $** of {symbol} stocks", 
+                ephemeral=True
+            )
+            return
 
         # update values
         user.cash += value
@@ -210,11 +227,17 @@ class SellGroup(app_commands.Group):
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
         
+        # check transation
+        if symbol not in user.stocks or user.stocks[symbol] < quantity:
+            await iter.response.send_message(
+                f"You dont have enouth of that stock to complete the transaction. You own **{round(user.stocks.get(symbol, 0), 3)}** stocks of {symbol}", 
+                ephemeral=True
+            )
+            return
         
         # update values
         user.cash += quantity * stock_current_value
         user.stocks[symbol] -= quantity
-        
         
         # construct message
         embed = discord.Embed(title="Sell ticket")
