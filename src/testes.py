@@ -5,7 +5,7 @@ from pprint import pprint
 
 def teste_database():
     from database.database import InMemoryDatabase
-    file_path = "./data.json"
+    file_path = "C:\\Users\\User\\Documents\\Vscode_projs\\discord-trading-bot\\src\\new_data.json"
     db = InMemoryDatabase(file_path)
 
     db.display_all()
@@ -16,7 +16,7 @@ def teste_database():
 def teste_database_get_new_user():
     from database.database import InMemoryDatabase
     
-    db = InMemoryDatabase("./teste.json")
+    db = InMemoryDatabase("C:\\Users\\User\\Documents\\Vscode_projs\\discord-trading-bot\\src\\new_data.json")
 
     print(db.get_user(1, 2).data['cash'])
     print(db.get_user(2, 3).data['cash'])
@@ -71,8 +71,8 @@ def teste_stock_logo():
     plt.show()
 
 def main():
-    # teste_database()
-    # teste_database_get_new_user()
+    teste_database()
+    teste_database_get_new_user()
     # teste_generate_stock_graph()
     # teste_stock_logo()
     

@@ -5,6 +5,7 @@ import pandas as pd
 import requests
 import yfinance as yf
 
+from database.position import Position
 from utils import Stock
 
 # decorators
@@ -88,7 +89,7 @@ def get_stock_current_value(symbol: str) -> float:
 
     return currentPrice
 
-def get_stock_position(stocks: Dict[str, float]) -> List[Tuple[str, float]]:
+def get_stock_position(stocks: Dict[str, Position]) -> List[Tuple[str, float]]:
     """
     Calculate the positions of stocks based on their current prices and quantities.
 
@@ -101,12 +102,12 @@ def get_stock_position(stocks: Dict[str, float]) -> List[Tuple[str, float]]:
 
     positions = []
     
-    for symbol, quantity in stocks.items():
+    for symbol, position in stocks.items():
         stock = yf.Ticker(symbol)
         info = stock.info
         if 'currentPrice' in info:
             current_price = info['currentPrice']
-            positions.append((symbol, current_price * quantity))
+            positions.append((symbol, current_price * position.number_owned))
 
     return positions
 

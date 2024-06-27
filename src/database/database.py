@@ -4,7 +4,7 @@ from typing import Dict
 
 from utils import default_data_file
 
-from .guild import Guild, GuildEncoder
+from .guild import Guild
 
 
 class InMemoryDatabase:
@@ -32,7 +32,7 @@ class InMemoryDatabase:
             return
         
         with open(self.file_path, 'w') as f:
-            json.dump(self.data, f, indent=4, cls=GuildEncoder)
+            json.dump(self.serialize(), f, indent=4)
 
     def display_all(self):
         pprint(self.data)
@@ -48,6 +48,14 @@ class InMemoryDatabase:
         guild = self.data[guild_id]
         
         return guild.get_user(auther_id)
+
+    def serialize(self) -> Dict[str, dict]:
+        resp = {}
+        
+        for i in self.data:
+            resp[i] = self.data[i].serialize()
+        
+        return resp
 
 
 def main():

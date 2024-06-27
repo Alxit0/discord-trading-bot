@@ -24,7 +24,7 @@ async def sync(ctx: commands.Context):
     if ctx.author.id != OWNER_ID:
         await ctx.send("Not owner")
         return
-    
+
     try:
         synced = await client.tree.sync()
         print(f"Synced {len(synced)} commnad(s)")
@@ -36,28 +36,44 @@ async def sync(ctx: commands.Context):
 
 @client.tree.command(name="profile")
 @only_users_allowed()
-async def profile(iter: discord.Interaction):
+@app_commands.describe(member="user to see the profile")
+async def profile(iter: discord.Interaction, member: discord.Member = None):
     """Gives the profile of a user"""
     # Acknowledge the interaction immediately
     await iter.response.defer()
+
+    # pull relevant data    
+    if member is None:
+        user = iter.user
+        user_db_info = db.get_user(iter.guild.id, user.id)
+    else:
+        user = member
+        user_db_info = db.get_user(iter.guild.id, member.id)
+
+
+    # calc values
+    stock_values = get_stock_position(user_db_info.stocks)
     
-    user = db.get_user(iter.guild.id, iter.user.id)
+    portfolio_value = round(sum(i[1] for i in stock_values), 3)
+    value_invested = round(sum(map(lambda x=Position:x.valued_invested, user_db_info.stocks.values())), 2)
+    return_value = round(portfolio_value - value_invested, 2)
+    return_value_per = round(return_value * 100 / value_invested, 3) if value_invested != 0 else 0
 
-    stock_values = get_stock_position(user.stocks)
-
+    
+    # construct message
     graph = plot_stock_positions_bar(stock_values)
 
     embed = discord.Embed(
         color=discord.Color.dark_teal(),
-        title=iter.user.display_name,
+        title=user.display_name,
     )
-    embed.set_thumbnail(url=iter.user.avatar.url)
+    embed.set_thumbnail(url=user.avatar.url)
 
-    embed.add_field(name="Portfolio", value=round(sum(i[1] for i in stock_values), 3), inline=False)
+    embed.add_field(name="Portfolio", value=portfolio_value, inline=False)
     
-    embed.add_field(name="Cash", value=user.cash, inline=True)
-    embed.add_field(name="Invested", value='???', inline=True)
-    embed.add_field(name="Return", value='???? (??%)', inline=True)
+    embed.add_field(name="Cash", value=f"${user_db_info.cash}", inline=True)
+    embed.add_field(name="Invested", value=f"${value_invested}", inline=True)
+    embed.add_field(name="Return", value=f'${return_value} ({"+-"[return_value < 0]}{abs(return_value_per)}%)', inline=True)
 
     file = discord.File(graph, filename='graph.png')
     embed.set_image(url='attachment://graph.png')
@@ -127,8 +143,10 @@ class BuyGroup(app_commands.Group):
         user.cash -= value
 
         if symbol not in user.stocks:
-            user.stocks[symbol] = 0
-        user.stocks[symbol] += value / stock_current_value
+            user.stocks[symbol] = Position()
+        
+        user.stocks[symbol].number_owned += value / stock_current_value
+        user.stocks[symbol].valued_invested += value
 
         # construct message
         embed = discord.Embed(title="Buy ticket")
@@ -167,8 +185,10 @@ class BuyGroup(app_commands.Group):
         user.cash -= quantity * stock_current_value
 
         if symbol not in user.stocks:
-            user.stocks[symbol] = 0
-        user.stocks[symbol] += quantity
+            user.stocks[symbol] = Position()
+        
+        user.stocks[symbol].number_owned += quantity
+        user.stocks[symbol].valued_invested += quantity * stock_current_value
         
         # construct message
         embed = discord.Embed(title="Buy ticket")
@@ -199,9 +219,10 @@ class SellGroup(app_commands.Group):
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
         stock_current_value = get_stock_current_value(symbol)
+        shares_to_sell = value / stock_current_value
         
         # check transation
-        if symbol not in user.stocks or user.stocks[symbol] < value / stock_current_value:
+        if symbol not in user.stocks or user.stocks[symbol].number_owned < shares_to_sell:
             current_owned = round(user.stocks.get(symbol, 0) * stock_current_value, 3)
             await iter.followup.send(
                 f"You dont have enouth of that stock to complete the transaction. You own **{current_owned} $** of {symbol} stocks", 
@@ -210,8 +231,11 @@ class SellGroup(app_commands.Group):
             return
 
         # update values
+        avg_cost_per_share = user.stocks[symbol].valued_invested / user.stocks[symbol].number_owned
+        
         user.cash += value
-        user.stocks[symbol] -= value / stock_current_value
+        user.stocks[symbol].number_owned -= shares_to_sell
+        user.stocks[symbol].valued_invested -= avg_cost_per_share * shares_to_sell
         
         # construct message
         embed = discord.Embed(title="Sell ticket")
@@ -219,7 +243,7 @@ class SellGroup(app_commands.Group):
         embed.add_field(name="Symbol", value=symbol, inline=True)
         embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
         embed.add_field(name="Sold", value=f"{value} $", inline=True)
-        embed.add_field(name="Total", value=f"{round(value / stock_current_value, 3)} shares", inline=False)
+        embed.add_field(name="Total", value=f"{round(shares_to_sell, 3)} shares", inline=False)
         
         await iter.followup.send(embed=embed)
 
@@ -239,7 +263,7 @@ class SellGroup(app_commands.Group):
         stock_current_value = get_stock_current_value(symbol)
         
         # check transation
-        if symbol not in user.stocks or user.stocks[symbol] < quantity:
+        if symbol not in user.stocks or user.stocks[symbol].number_owned < quantity:
             await iter.followup.send(
                 f"You dont have enouth of that stock to complete the transaction. You own **{round(user.stocks.get(symbol, 0), 3)}** stocks of {symbol}", 
                 ephemeral=True
@@ -247,8 +271,11 @@ class SellGroup(app_commands.Group):
             return
         
         # update values
+        avg_cost_per_share = user.stocks[symbol].valued_invested / user.stocks[symbol].number_owned
+        
         user.cash += quantity * stock_current_value
-        user.stocks[symbol] -= quantity
+        user.stocks[symbol].number_owned -= quantity
+        user.stocks[symbol].valued_invested -= avg_cost_per_share * quantity
         
         # construct message
         embed = discord.Embed(title="Sell ticket")

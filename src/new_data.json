@@ -1,0 +1,30 @@
+{
+    "0x7f84cc99fc4000a": {
+        "0x77a298bf902001e": {
+            "cash": 3535.0,
+            "stocks": {
+                "AAPL": {
+                    "number_owned": 13.75716825743435,
+                    "valued_invested": 0
+                },
+                "TSLA": {
+                    "number_owned": 2.546418228512103,
+                    "valued_invested": 0
+                }
+            }
+        },
+        "0x8d5b40456040020": {
+            "cash": 3733.98,
+            "stocks": {
+                "AAPL": {
+                    "number_owned": 0.48195093739457323,
+                    "valued_invested": 0
+                },
+                "TSLA": {
+                    "number_owned": 0.9071635429757936,
+                    "valued_invested": 0
+                }
+            }
+        }
+    }
+}

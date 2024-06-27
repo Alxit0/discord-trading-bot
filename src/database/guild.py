@@ -29,19 +29,14 @@ class Guild:
         
         return self.data[user_id]
     
-    def __repr__(self) -> str:
-        return self.data.__repr__()
-
-
-class GuildEncoder(json.JSONEncoder):
-    def default(self, obj: Guild):
-        
-        if not isinstance(obj, Guild):
-            return super().default(obj)
-        
+    
+    def serialize(self) -> Dict[str, dict]:
         resp = {}
-        for guild_id, user_data in obj.data.items():
-            resp[guild_id] = user_data.data
+        
+        for i in self.data:
+            resp[i] = self.data[i].serialize()
         
         return resp
-        
+    
+    def __repr__(self) -> str:
+        return self.data.__repr__()
