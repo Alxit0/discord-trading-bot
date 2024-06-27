@@ -39,7 +39,7 @@ async def sync(ctx: commands.Context):
 async def profile(iter: discord.Interaction):
     """Gives the profile of a user"""
     # Acknowledge the interaction immediately
-    await iter.response.defer(ephemeral=True)
+    await iter.response.defer()
     
     user = db.get_user(iter.guild.id, iter.user.id)
 
@@ -68,6 +68,7 @@ async def profile(iter: discord.Interaction):
 @client.tree.command(name="stock")
 @app_commands.describe(name='stock symbol', range='graph time range')
 @only_users_allowed()
+@check_stock_validaty()
 async def stock(iter: discord.Interaction, name: str, range: str='6mo'):
     """Gives the info and history of a stock for the past 6 months
 
@@ -76,23 +77,11 @@ async def stock(iter: discord.Interaction, name: str, range: str='6mo'):
         range (str, optional): Graph time range. Defaults to '6mo'.
     """
     # Acknowledge the interaction immediately
-    await iter.response.defer(ephemeral=True)
+    await iter.response.defer()
     
     # Get historical prices for the last 6 months
     stock_data = get_stock_data(name, range)
-    
-    if stock_data is None:    
-        sugestions = get_symbol_suggestions(name)
-        sugestions_str = ' '.join(f"`{i}`" for i in sugestions)
-        
-        await iter.followup.send(
-            f"I don't have that info about `{name}`.\nCheck if the symbol is right." + 
-                (f"\nSuggestions: {sugestions_str}" if sugestions_str else ''),
-            ephemeral=True    
-        )
-        
-        return
-    
+            
     buffer = build_history_graph(stock_data)
     
     # Create and send the embedded message with the graph image attached
@@ -120,9 +109,10 @@ class BuyGroup(app_commands.Group):
         value="The price at which you want to buy the stock"
     )
     @only_users_allowed()
+    @check_stock_validaty()
     async def buy_price(self, iter: discord.Interaction, symbol:str, value: float):
         # Acknowledge the interaction immediately
-        await iter.response.defer(ephemeral=True)
+        await iter.response.defer()
     
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
@@ -156,9 +146,10 @@ class BuyGroup(app_commands.Group):
         quantity="The quantity of stocks you want to buy"
     )
     @only_users_allowed()
+    @check_stock_validaty()
     async def buy_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
         # Acknowledge the interaction immediately
-        await iter.response.defer(ephemeral=True)
+        await iter.response.defer()
         
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
@@ -167,7 +158,7 @@ class BuyGroup(app_commands.Group):
         # check transation
         if user.cash < stock_current_value * quantity:
             await iter.followup.send(
-                f"You cant afford this. You just have **{user.cash} $** ({round(user.cash/stock_current_value, 3)} stocks of {symbol}).", 
+                f"You cant afford this. You just have **{user.cash} $** (**{round(user.cash/stock_current_value, 3)}** stocks of {symbol}).", 
                 ephemeral=True
             )
             return
@@ -200,9 +191,10 @@ class SellGroup(app_commands.Group):
         value="The price at which you want to sell the stock"
     )
     @only_users_allowed()
+    @check_stock_validaty()
     async def sell_price(self, iter: discord.Interaction, symbol:str, value: float):
         # Acknowledge the interaction immediately
-        await iter.response.defer(ephemeral=True)
+        await iter.response.defer()
         
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
@@ -237,9 +229,10 @@ class SellGroup(app_commands.Group):
         quantity="The quantity of stocks you want to sell"
     )
     @only_users_allowed()
+    @check_stock_validaty()
     async def sell_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
         # Acknowledge the interaction immediately
-        await iter.response.defer(ephemeral=True)
+        await iter.response.defer()
         
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)

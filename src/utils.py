@@ -5,6 +5,7 @@ import io
 import os
 import random
 from typing import List, Tuple
+import discord
 from discord.ext import commands
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors

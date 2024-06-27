@@ -1,11 +1,38 @@
+from functools import wraps
 from typing import Dict, List, Tuple
+import discord
 import pandas as pd
 import requests
 import yfinance as yf
 
 from utils import Stock
 
-# Function to get historical prices
+# decorators
+def check_stock_validaty():
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            iter: discord.Interaction = args[0]  # Assuming the first argument is always the interaction
+
+            try:
+                await func(*args, **kwargs)
+            
+            except ValueError as e:
+                name = kwargs.get('name', 'Unknown')
+                suggestions = get_symbol_suggestions(name)
+                suggestions_str = ' '.join(f"`{i}`" for i in suggestions)
+                await iter.followup.send(
+                    f"I don't have that info about `{name}`.\nCheck if the symbol is right." +
+                    (f"\nSuggestions: {suggestions_str}" if suggestions_str else ''),
+                    ephemeral=True
+                )
+    
+        return wrapper
+
+    return decorator
+
+
+# functions
 def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
     """
     Retrieve historical stock data for a given symbol.
@@ -25,7 +52,7 @@ def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
     hist = stock.history(period=range)
 
     if hist.empty:
-        return None
+        raise ValueError("Ticker not recognized")
 
     if verbose:
         print(hist)
@@ -54,7 +81,10 @@ def get_stock_current_value(symbol: str) -> float:
 
     info = stock.info
 
-    currentPrice = info['currentPrice'] if 'currentPrice' in info else info['open'] 
+    try:
+        currentPrice = info['currentPrice'] if 'currentPrice' in info else info['open'] 
+    except KeyError:
+        raise ValueError("Ticker not recognized")
 
     return currentPrice
 
