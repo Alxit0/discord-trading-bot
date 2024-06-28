@@ -210,6 +210,14 @@ class BuyGroup(app_commands.Group):
     @only_users_allowed()
     @check_stock_validaty()
     async def buy_price(self, iter: discord.Interaction, symbol:str, value: float):
+        # arguments check
+        if value < 0:
+            await iter.response.send_message(
+                f"Can't buy `${value}` of a stock. The **value** must be a positive number.",
+                ephemeral=True
+            )
+            return
+        
         # Acknowledge the interaction immediately
         await iter.response.defer()
     
@@ -249,6 +257,14 @@ class BuyGroup(app_commands.Group):
     @only_users_allowed()
     @check_stock_validaty()
     async def buy_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
+        # arguments check
+        if quantity < 0:
+            await iter.response.send_message(
+                f"Can't buy `${quantity}` stocks. The **quantity** must be a positive number.",
+                ephemeral=True
+            )
+            return
+        
         # Acknowledge the interaction immediately
         await iter.response.defer()
         
@@ -296,6 +312,14 @@ class SellGroup(app_commands.Group):
     @only_users_allowed()
     @check_stock_validaty()
     async def sell_price(self, iter: discord.Interaction, symbol:str, value: float):
+        # arguments check
+        if value < 0:
+            await iter.response.send_message(
+                f"Can't sell `${value}` of a stock. The **value** must be a positive number.",
+                ephemeral=True
+            )
+            return
+        
         # Acknowledge the interaction immediately
         await iter.response.defer()
         
@@ -338,6 +362,14 @@ class SellGroup(app_commands.Group):
     @only_users_allowed()
     @check_stock_validaty()
     async def sell_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
+        # arguments check
+        if quantity < 0:
+            await iter.response.send_message(
+                f"Can't buy `${quantity}` stocks. The **quantity** must be a positive number.",
+                ephemeral=True
+            )
+            return
+        
         # Acknowledge the interaction immediately
         await iter.response.defer()
         
