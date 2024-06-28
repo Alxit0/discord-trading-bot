@@ -1,8 +1,10 @@
 import atexit
 from datetime import datetime
+import math
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ui import Button, View
 
 from creds import *
 from apis.yfinance_api import *
@@ -113,6 +115,87 @@ async def stock(iter: discord.Interaction, name: str, range: str='6mo'):
     embed.set_image(url='attachment://graph.png')
 
     await iter.followup.send(embed=embed, file=file)
+
+
+@client.tree.command(name="portfolio")
+@app_commands.describe(member="user to see the portfolio")
+@only_users_allowed()
+async def view_portfolio(iter: discord.Interaction, member: discord.Member = None):
+    """View detailed information about your stock portfolio"""
+    await iter.response.defer()
+
+    # get relevant data
+    if member is None:
+        user = iter.user
+        user_db_info = db.get_user(iter.guild.id, user.id)
+    else:
+        user = member
+        user_db_info = db.get_user(iter.guild.id, member.id)
+
+    stock_details = []
+    for symbol, position in user_db_info.stocks.items():
+        stock_details.append({
+            "symbol": symbol,
+            "number_owned": round(position.number_owned, 3),
+            "valued_invested": position.valued_invested,
+        })
+
+
+    # build message
+    position_per_page = 5
+    total_pages = math.ceil(len(stock_details) / position_per_page)
+    current_page = 0
+
+    def generate_embed(page: int, per_page: int = position_per_page):
+        start = page * per_page
+        end = start + per_page
+        embed = discord.Embed(
+            color=discord.Color.dark_teal(),
+            title=f"{user.display_name}'s Portfolio",
+            timestamp=datetime.now()
+        )
+        embed.set_thumbnail(url=user.avatar.url)
+
+        for stock in stock_details[start:end]:
+            embed.add_field(
+                name=f"{stock['symbol']} ({stock['number_owned']} shares)",
+                value=(f"Invested: ${stock['valued_invested']}\n", "Ola"),
+                inline=False
+            )
+
+        return embed
+
+    async def update_message(page):
+        await iter.edit_original_response(embed=generate_embed(page), view=view)
+
+    class PortfolioView(View):
+        def __init__(self):
+            super().__init__()
+
+        @discord.ui.button(label='Previous', style=discord.ButtonStyle.secondary)
+        async def previous_page(self, interaction: discord.Interaction, button: Button):
+            nonlocal current_page
+            if current_page > 0:
+                current_page -= 1
+                await interaction.response.defer()  # Acknowledge the interaction
+                await update_message(current_page)
+            else:
+                await interaction.response.defer()  # Acknowledge the interaction
+
+        @discord.ui.button(label='Next', style=discord.ButtonStyle.secondary)
+        async def next_page(self, interaction: discord.Interaction, button: Button):
+            nonlocal current_page
+            if current_page < total_pages - 1:
+                current_page += 1
+                await interaction.response.defer()  # Acknowledge the interaction
+                await update_message(current_page)
+            else:
+                await interaction.response.defer()  # Acknowledge the interaction
+
+    view = PortfolioView()
+    embed = generate_embed(current_page)
+    
+    await iter.followup.send(embed=embed, view=view)
 
 
 class BuyGroup(app_commands.Group):
