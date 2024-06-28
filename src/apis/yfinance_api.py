@@ -105,9 +105,16 @@ def get_stock_position(stocks: Dict[str, Position]) -> List[Tuple[str, float]]:
     for symbol, position in stocks.items():
         stock = yf.Ticker(symbol)
         info = stock.info
+        
         if 'currentPrice' in info:
             current_price = info['currentPrice']
-            positions.append((symbol, current_price * position.number_owned))
+        elif 'open' in info:
+            current_price = info['open']
+        else:
+            continue
+        
+        positions.append((symbol, current_price * position.number_owned))
+            
 
     return positions
 
