@@ -1,4 +1,3 @@
-
 import asyncio
 from pprint import pprint
 
@@ -70,11 +69,18 @@ def teste_stock_logo():
     plt.axis('off')
     plt.show()
 
+def teste_currency_convert():
+    from apis.yfinance_api import convert_currency
+    
+    print(convert_currency(0, "EUR", "USD"))
+
+
 def main():
-    teste_database()
-    teste_database_get_new_user()
+    # teste_database()
+    # teste_database_get_new_user()
     # teste_generate_stock_graph()
     # teste_stock_logo()
+    teste_currency_convert()
     
     pass
 

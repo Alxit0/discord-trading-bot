@@ -1,4 +1,5 @@
 from functools import wraps
+from forex_python.converter import CurrencyCodes
 from typing import Dict, List, Tuple
 import discord
 import pandas as pd
@@ -68,7 +69,7 @@ def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
 
     return Stock(info['symbol'], info['shortName'], currentPrice, info['currency'], df)
 
-def get_stock_current_value(symbol: str) -> float:
+def get_stock_current_value(symbol: str, *, currency:str = None) -> float:
     """Get the current value of a stock given its symbol.
 
     Args:
@@ -86,6 +87,9 @@ def get_stock_current_value(symbol: str) -> float:
         currentPrice = info['currentPrice'] if 'currentPrice' in info else info['open'] 
     except KeyError:
         raise ValueError("Ticker not recognized")
+
+    if currency is not None:
+        return convert_currency(currentPrice, info['currency'], "USD")
 
     return currentPrice
 
@@ -141,3 +145,46 @@ def get_symbol_suggestions(symbol: str) -> List[str]:
         return []
     
     return [i['symbol'] for i in req.json().get('quotes', [])]
+
+def convert_currency(amount: float, base_currency: str, target_currency: str) -> float:
+    """
+    Converts an amount from the base currency to the target currency using the latest exchange rate.
+
+    Args:
+        amount (float): The amount of money to be converted.
+        base_currency (str): The base currency code (e.g., 'USD').
+        target_currency (str): The target currency code (e.g., 'EUR').
+
+    Returns:
+        float: The converted amount in the target currency.
+    """
+    if base_currency == target_currency:
+        return amount
+    
+    def get_exchange_rate(base_currency: str, target_currency: str) -> float:
+        ticker = f"{base_currency}{target_currency}=X"
+        data: pd.DataFrame = yf.download(ticker, period="1d", progress=False)
+        
+        if not data.empty:
+            return data['Close'].iloc[-1]
+        else:
+            raise ValueError(f"Exchange rate for {base_currency} to {target_currency} not found.")
+    
+    exchange_rate = get_exchange_rate(base_currency, target_currency)
+    converted_amount = amount * exchange_rate
+    
+    return converted_amount
+
+def get_currency_symbol(currency: str) -> str:
+    """
+    Retrieves the currency symbol for a given currency code.
+
+    Args:
+        currency (str): The currency code (e.g., 'USD').
+
+    Returns:
+        str: The currency symbol (e.g., '$').
+    """
+    c = CurrencyCodes()
+    symbol = c.get_symbol(currency)
+    return symbol

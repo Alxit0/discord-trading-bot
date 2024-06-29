@@ -75,7 +75,7 @@ async def profile(iter: discord.Interaction, member: discord.Member = None):
     
     embed.add_field(name="Cash", value=f"${user_db_info.cash}", inline=True)
     embed.add_field(name="Invested", value=f"${value_invested}", inline=True)
-    embed.add_field(name="Return", value=f'${return_value} ({"+-"[return_value < 0]}{abs(return_value_per)}%)', inline=True)
+    embed.add_field(name="Return", value=f'${return_value} ({"+-"[int(return_value < 0)]}{abs(return_value_per)}%)', inline=True)
 
     file = discord.File(graph, filename='graph.png')
     embed.set_image(url='attachment://graph.png')
@@ -106,8 +106,16 @@ async def stock(iter: discord.Interaction, name: str, range: str='6mo'):
     embed = discord.Embed(title=stock_data.name, colour=0x0076f5, timestamp=datetime.now())
 
     embed.add_field(name="Symbol", value=stock_data.symbol, inline=True)
-    embed.add_field(name="Current Price", value=stock_data.value, inline=True)
-    embed.add_field(name="Currency", value=stock_data.currency, inline=True)
+    embed.add_field(
+        name="Current Price",
+        value=f"{get_currency_symbol(stock_data.currency)} {stock_data.value} ({stock_data.currency})", 
+        inline=True
+    )
+    embed.add_field(
+        name="Converted",
+        value=f"$ {convert_currency(stock_data.value, stock_data.currency, "USD"):.2f}",
+        inline=True
+    )
 
     embed.set_thumbnail(url=stock_data.image_url())
 
@@ -223,7 +231,7 @@ class BuyGroup(app_commands.Group):
     
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
-        stock_current_value = get_stock_current_value(symbol)
+        stock_current_value = get_stock_current_value(symbol, currency="USD")
         
         # check transation
         if user.cash < value:
@@ -243,9 +251,9 @@ class BuyGroup(app_commands.Group):
         embed = discord.Embed(title="Buy ticket")
 
         embed.add_field(name="Symbol", value=symbol, inline=True)
-        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value:.2f} $", inline=True)
         embed.add_field(name="Spent", value=f"{value} $", inline=True)
-        embed.add_field(name="Total", value=f"{round(value / stock_current_value, 3)} shares", inline=False)
+        embed.add_field(name="Total", value=f"{value / stock_current_value:.3f} shares", inline=False)
         
         await iter.followup.send(embed=embed)
 
@@ -270,7 +278,7 @@ class BuyGroup(app_commands.Group):
         
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
-        stock_current_value = get_stock_current_value(symbol)
+        stock_current_value = get_stock_current_value(symbol, currency="USD")
         
         # check transation
         if user.cash < stock_current_value * quantity:
@@ -293,9 +301,9 @@ class BuyGroup(app_commands.Group):
         embed = discord.Embed(title="Buy ticket")
 
         embed.add_field(name="Symbol", value=symbol, inline=True)
-        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value:.2f} $", inline=True)
         embed.add_field(name="Shares", value=quantity, inline=True)
-        embed.add_field(name="Total", value=f"{quantity * stock_current_value} $", inline=False)
+        embed.add_field(name="Total", value=f"{quantity * stock_current_value:.2f} $", inline=False)
         
         await iter.followup.send(embed=embed)
 
@@ -325,7 +333,7 @@ class SellGroup(app_commands.Group):
         
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
-        stock_current_value = get_stock_current_value(symbol)
+        stock_current_value = get_stock_current_value(symbol, currency="USD")
         shares_to_sell = value / stock_current_value
         
         # check transation
@@ -344,13 +352,16 @@ class SellGroup(app_commands.Group):
         user.stocks[symbol].number_owned -= shares_to_sell
         user.stocks[symbol].valued_invested -= avg_cost_per_share * shares_to_sell
         
+        if user.stocks[symbol].number_owned == 0:
+            user.stocks.pop(symbol)
+        
         # construct message
         embed = discord.Embed(title="Sell ticket")
 
         embed.add_field(name="Symbol", value=symbol, inline=True)
-        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value:.2f} $", inline=True)
         embed.add_field(name="Sold", value=f"{value} $", inline=True)
-        embed.add_field(name="Total", value=f"{round(shares_to_sell, 3)} shares", inline=False)
+        embed.add_field(name="Total", value=f"{shares_to_sell:.3f} shares", inline=False)
         
         await iter.followup.send(embed=embed)
 
@@ -375,7 +386,7 @@ class SellGroup(app_commands.Group):
         
         # get relevant data
         user = db.get_user(iter.guild_id, iter.user.id)
-        stock_current_value = get_stock_current_value(symbol)
+        stock_current_value = get_stock_current_value(symbol, currency="USD")
         
         # check transation
         if symbol not in user.stocks or user.stocks[symbol].number_owned < quantity:
@@ -396,9 +407,9 @@ class SellGroup(app_commands.Group):
         embed = discord.Embed(title="Sell ticket")
 
         embed.add_field(name="Symbol", value=symbol, inline=True)
-        embed.add_field(name="Current Price", value=f"{stock_current_value} $", inline=True)
+        embed.add_field(name="Current Price", value=f"{stock_current_value:.2f} $", inline=True)
         embed.add_field(name="Shares", value=quantity, inline=True)
-        embed.add_field(name="Total", value=f"{quantity * stock_current_value} $", inline=False)
+        embed.add_field(name="Total", value=f"{quantity * stock_current_value:.2f} $", inline=False)
         
         await iter.followup.send(embed=embed)
 
