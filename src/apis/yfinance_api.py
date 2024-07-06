@@ -88,10 +88,10 @@ def get_stock_current_value(symbol: str, *, currency:str = None) -> float:
     except KeyError:
         raise ValueError("Ticker not recognized")
 
-    if currency is not None:
-        return convert_currency(currentPrice, info['currency'], "USD")
-
-    return currentPrice
+    if currency is None:
+        return currentPrice
+    
+    return convert_currency(currentPrice, info['currency'], currency)
 
 def get_stock_position(stocks: Dict[str, Position]) -> List[Tuple[str, float]]:
     """
@@ -107,18 +107,12 @@ def get_stock_position(stocks: Dict[str, Position]) -> List[Tuple[str, float]]:
     positions = []
     
     for symbol, position in stocks.items():
-        stock = yf.Ticker(symbol)
-        info = stock.info
-        
-        if 'currentPrice' in info:
-            current_price = info['currentPrice']
-        elif 'open' in info:
-            current_price = info['open']
-        else:
+        try:
+            current_price = get_stock_current_value(symbol, currency="USD")
+        except ValueError:
             continue
-        
+
         positions.append((symbol, current_price * position.number_owned))
-            
 
     return positions
 
