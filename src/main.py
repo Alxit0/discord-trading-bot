@@ -223,7 +223,7 @@ class BuyGroup(app_commands.Group):
         # check transation
         if user.cash < stock_current_value * quantity:
             await iter.followup.send(
-                f"You cant afford this. You just have **{user.cash} $** (**{round(user.cash/stock_current_value, 3)}** stocks of {symbol}).", 
+                f"You cant afford this. You just have **{user.cash} $** (**{user.cash/stock_current_value:.3f}** stocks of {symbol}).", 
                 ephemeral=True
             )
             return
@@ -278,9 +278,9 @@ class SellGroup(app_commands.Group):
         
         # check transation
         if symbol not in user.stocks or user.stocks[symbol].number_owned < shares_to_sell:
-            current_owned = round(user.stocks.get(symbol, 0) * stock_current_value, 3)
+            current_owned = user.stocks[symbol].number_owned if symbol in user.stocks else 0
             await iter.followup.send(
-                f"You dont have enouth of that stock to complete the transaction. You own **{current_owned} $** of {symbol} stocks", 
+                f"You dont have enouth of that stock to complete the transaction. You own **{current_owned * stock_current_value:.5f} $** of {symbol} stocks", 
                 ephemeral=True
             )
             return
@@ -330,8 +330,9 @@ class SellGroup(app_commands.Group):
         
         # check transation
         if symbol not in user.stocks or user.stocks[symbol].number_owned < quantity:
+            current_owned = user.stocks[symbol].number_owned if symbol in user.stocks else 0
             await iter.followup.send(
-                f"You dont have enouth of that stock to complete the transaction. You own **{round(user.stocks.get(symbol, 0), 3)}** stocks of {symbol}", 
+                f"You dont have enouth of that stock to complete the transaction. You own **{current_owned:.5f}** stocks of {symbol}", 
                 ephemeral=True
             )
             return
