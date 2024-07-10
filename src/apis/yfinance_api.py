@@ -1,13 +1,17 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from functools import wraps
 from forex_python.converter import CurrencyCodes
-from typing import Dict, List, Tuple
 import discord
 import pandas as pd
 import requests
 import yfinance as yf
 
-from database.position import Position
-from utils import Stock
+if TYPE_CHECKING:
+    from typing import Dict, List
+    from database.position import Position
+    from utils import Stock
 
 # decorators
 def check_stock_validaty(iter_pos: int = 0):

@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 # func
 import discord
 from datetime import datetime
@@ -5,11 +8,12 @@ from apis.yfinance_api import convert_currency, get_currency_symbol
 from utils import build_history_graph, plot_stock_positions_bar
 
 # typing
-from typing import Dict, List
-from database.position import Position
-from database.user import User
-from discord import Member
-from utils import Stock
+if TYPE_CHECKING:
+    from typing import Dict, List
+    from database.position import Position
+    from database.user import User
+    from discord import Member
+    from utils import Stock
 
 
 def create_profile_embed(user: Member, user_db_info: User, stock_values: Dict[str, float]):

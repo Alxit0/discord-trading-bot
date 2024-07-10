@@ -11,10 +11,6 @@ import matplotlib.colors as mcolors
 import pandas as pd
 import requests
 
-from database.user import User
-from database.position import Position
-from apis.yfinance_api import get_stock_current_value
-
 # classes
 class Stock:
     _image_cache = {}
