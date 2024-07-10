@@ -8,8 +8,9 @@ DEFAULT_STATS = {
 }
 
 class Position:
-    def __init__(self, data:dict = None) -> None:
+    def __init__(self, symbol: str, data:dict = None) -> None:
         self.data = copy.deepcopy(DEFAULT_STATS) if data is None else data
+        self.symbol = symbol
     
     @property
     def number_owned(self) -> float:

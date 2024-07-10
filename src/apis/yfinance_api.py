@@ -10,12 +10,11 @@ from database.position import Position
 from utils import Stock
 
 # decorators
-def check_stock_validaty():
+def check_stock_validaty(iter_pos: int = 0):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            iter: discord.Interaction = args[0]  # Assuming the first argument is always the interaction
-
+            iter: discord.Interaction = args[iter_pos]  # Assuming the first argument is always the interaction
             try:
                 await func(*args, **kwargs)
             
@@ -93,7 +92,7 @@ def get_stock_current_value(symbol: str, *, currency:str = None) -> float:
     
     return convert_currency(currentPrice, info['currency'], currency)
 
-def get_stock_position(stocks: Dict[str, Position]) -> List[Tuple[str, float]]:
+def get_stock_position(stocks: Dict[str, Position]) -> Dict[str, float]:
     """
     Calculate the positions of stocks based on their current prices and quantities.
 
@@ -101,10 +100,10 @@ def get_stock_position(stocks: Dict[str, Position]) -> List[Tuple[str, float]]:
         stocks (List[Tuple[str, float]]): A list of tuples containing stock symbols and quantities.
 
     Returns:
-        List[Tuple[str, float]]: A list of tuples containing stock symbols and their calculated positions.
+        Dict[str, float]: A list of tuples containing stock symbols and their calculated positions.
     """
 
-    positions = []
+    positions = {}
     
     for symbol, position in stocks.items():
         try:
@@ -112,8 +111,8 @@ def get_stock_position(stocks: Dict[str, Position]) -> List[Tuple[str, float]]:
         except ValueError:
             continue
 
-        positions.append((symbol, current_price * position.number_owned))
-
+        positions[symbol] = current_price * position.number_owned
+        
     return positions
 
 def get_symbol_suggestions(symbol: str) -> List[str]:
@@ -156,6 +155,9 @@ def convert_currency(amount: float, base_currency: str, target_currency: str) ->
         return amount
     
     def get_exchange_rate(base_currency: str, target_currency: str) -> float:
+        if base_currency == target_currency:
+            return 1
+        
         ticker = f"{base_currency}{target_currency}=X"
         data: pd.DataFrame = yf.download(ticker, period="1d", progress=False)
         

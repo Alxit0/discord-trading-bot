@@ -1,6 +1,6 @@
 import atexit
-from datetime import datetime
 import math
+from typing import Optional
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -8,9 +8,10 @@ from discord.ui import Button, View
 
 from creds import *
 from apis.yfinance_api import *
-from utils import only_users_allowed, build_history_graph, plot_stock_positions_bar
+from utils import only_users_allowed
 from database.database import InMemoryDatabase
 
+from view import *
 
 client = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 db: InMemoryDatabase = None
@@ -39,7 +40,7 @@ async def sync(ctx: commands.Context):
 @client.tree.command(name="profile")
 @only_users_allowed()
 @app_commands.describe(member="user to see the profile")
-async def profile(iter: discord.Interaction, member: discord.Member = None):
+async def profile(iter: discord.Interaction, member: Optional[discord.Member] = None):
     """Gives the profile of a user"""
     # Acknowledge the interaction immediately
     await iter.response.defer()
@@ -56,29 +57,8 @@ async def profile(iter: discord.Interaction, member: discord.Member = None):
     # calc values
     stock_values = get_stock_position(user_db_info.stocks)
     
-    portfolio_value = round(sum(i[1] for i in stock_values), 3)
-    value_invested = round(sum(map(lambda x=Position:x.valued_invested, user_db_info.stocks.values())), 2)
-    return_value = round(portfolio_value - value_invested, 2)
-    return_value_per = round(return_value * 100 / value_invested, 3) if value_invested != 0 else 0
-
-    
     # construct message
-    graph = plot_stock_positions_bar(stock_values)
-
-    embed = discord.Embed(
-        color=discord.Color.dark_teal(),
-        title=user.display_name,
-    )
-    embed.set_thumbnail(url=user.avatar.url)
-
-    embed.add_field(name="Portfolio", value=portfolio_value, inline=False)
-    
-    embed.add_field(name="Cash", value=f"${user_db_info.cash}", inline=True)
-    embed.add_field(name="Invested", value=f"${value_invested}", inline=True)
-    embed.add_field(name="Return", value=f'${return_value} ({"+-"[int(return_value < 0)]}{abs(return_value_per)}%)', inline=True)
-
-    file = discord.File(graph, filename='graph.png')
-    embed.set_image(url='attachment://graph.png')
+    embed, file = create_profile_embed(user, user_db_info, stock_values)
     
     await iter.followup.send(embed=embed, file=file)
     
@@ -99,36 +79,17 @@ async def stock(iter: discord.Interaction, name: str, range: str='6mo'):
     
     # Get historical prices for the last 6 months
     stock_data = get_stock_data(name, range)
-            
-    buffer = build_history_graph(stock_data)
     
     # Create and send the embedded message with the graph image attached
-    embed = discord.Embed(title=stock_data.name, colour=0x0076f5, timestamp=datetime.now())
-
-    embed.add_field(name="Symbol", value=stock_data.symbol, inline=True)
-    embed.add_field(
-        name="Current Price",
-        value=f"{get_currency_symbol(stock_data.currency)} {stock_data.value} ({stock_data.currency})", 
-        inline=True
-    )
-    embed.add_field(
-        name="Converted",
-        value=f"$ {convert_currency(stock_data.value, stock_data.currency, "USD"):.2f}",
-        inline=True
-    )
-
-    embed.set_thumbnail(url=stock_data.image_url())
-
-    file = discord.File(buffer, filename='graph.png')
-    embed.set_image(url='attachment://graph.png')
-
+    embed, file = create_stock_embed(stock_data)
+    
     await iter.followup.send(embed=embed, file=file)
 
 
 @client.tree.command(name="portfolio")
 @app_commands.describe(member="user to see the portfolio")
 @only_users_allowed()
-async def view_portfolio(iter: discord.Interaction, member: discord.Member = None):
+async def view_portfolio(iter: discord.Interaction, member: Optional[discord.Member] = None):
     """View detailed information about your stock portfolio"""
     await iter.response.defer()
 
@@ -140,38 +101,15 @@ async def view_portfolio(iter: discord.Interaction, member: discord.Member = Non
         user = member
         user_db_info = db.get_user(iter.guild.id, member.id)
 
-    stock_details = []
-    for symbol, position in user_db_info.stocks.items():
-        stock_details.append({
-            "symbol": symbol,
-            "number_owned": round(position.number_owned, 3),
-            "valued_invested": position.valued_invested,
-        })
-
+    user_stocks = list(user_db_info.stocks.values())
 
     # build message
     position_per_page = 5
-    total_pages = math.ceil(len(stock_details) / position_per_page)
+    total_pages = math.ceil(len(user_stocks) / position_per_page)
     current_page = 0
 
     def generate_embed(page: int, per_page: int = position_per_page):
-        start = page * per_page
-        end = start + per_page
-        embed = discord.Embed(
-            color=discord.Color.dark_teal(),
-            title=f"{user.display_name}'s Portfolio",
-            timestamp=datetime.now()
-        )
-        embed.set_thumbnail(url=user.avatar.url)
-
-        for stock in stock_details[start:end]:
-            embed.add_field(
-                name=f"{stock['symbol']} ({stock['number_owned']} shares)",
-                value=(f"Invested: ${stock['valued_invested']}\n", "Ola"),
-                inline=False
-            )
-
-        return embed
+        return create_portfolio_embed(user, user_stocks, page, per_page)
 
     async def update_message(page):
         await iter.edit_original_response(embed=generate_embed(page), view=view)
@@ -216,7 +154,7 @@ class BuyGroup(app_commands.Group):
         value="The price at which you want to buy the stock"
     )
     @only_users_allowed()
-    @check_stock_validaty()
+    @check_stock_validaty(1)
     async def buy_price(self, iter: discord.Interaction, symbol:str, value: float):
         # arguments check
         if value < 0:
@@ -242,7 +180,7 @@ class BuyGroup(app_commands.Group):
         user.cash -= value
 
         if symbol not in user.stocks:
-            user.stocks[symbol] = Position()
+            user.stocks[symbol] = Position(symbol)
         
         user.stocks[symbol].number_owned += value / stock_current_value
         user.stocks[symbol].valued_invested += value
@@ -263,7 +201,7 @@ class BuyGroup(app_commands.Group):
         quantity="The quantity of stocks you want to buy"
     )
     @only_users_allowed()
-    @check_stock_validaty()
+    @check_stock_validaty(1)
     async def buy_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
         # arguments check
         if quantity < 0:
@@ -292,7 +230,7 @@ class BuyGroup(app_commands.Group):
         user.cash -= quantity * stock_current_value
 
         if symbol not in user.stocks:
-            user.stocks[symbol] = Position()
+            user.stocks[symbol] = Position(symbol)
         
         user.stocks[symbol].number_owned += quantity
         user.stocks[symbol].valued_invested += quantity * stock_current_value
@@ -318,7 +256,7 @@ class SellGroup(app_commands.Group):
         value="The price at which you want to sell the stock"
     )
     @only_users_allowed()
-    @check_stock_validaty()
+    @check_stock_validaty(1)
     async def sell_price(self, iter: discord.Interaction, symbol:str, value: float):
         # arguments check
         if value < 0:
@@ -371,7 +309,7 @@ class SellGroup(app_commands.Group):
         quantity="The quantity of stocks you want to sell"
     )
     @only_users_allowed()
-    @check_stock_validaty()
+    @check_stock_validaty(1)
     async def sell_quantity(self, iter: discord.Interaction, symbol:str, quantity: int):
         # arguments check
         if quantity < 0:
@@ -402,6 +340,9 @@ class SellGroup(app_commands.Group):
         user.cash += quantity * stock_current_value
         user.stocks[symbol].number_owned -= quantity
         user.stocks[symbol].valued_invested -= avg_cost_per_share * quantity
+        
+        if user.stocks[symbol].number_owned == 0:
+            user.stocks.pop(symbol)
         
         # construct message
         embed = discord.Embed(title="Sell ticket")

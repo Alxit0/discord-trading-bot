@@ -4,13 +4,16 @@ from functools import wraps
 import io
 import os
 import random
-from typing import List, Tuple
-import discord
+from typing import Dict, List, Tuple
 from discord.ext import commands
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import pandas as pd
 import requests
+
+from database.user import User
+from database.position import Position
+from apis.yfinance_api import get_stock_current_value
 
 # classes
 class Stock:
@@ -163,17 +166,18 @@ def plot_stock_positions_smipie(positions: List[Tuple[str, float]]) -> io.BytesI
 
     return buffer
 
-def plot_stock_positions_bar(positions: List[Tuple[str, float]]) -> io.BytesIO:
+def plot_stock_positions_bar(positions: Dict[str, float]) -> io.BytesIO:
     """
     Plot a bar graph of stock positions.
 
     Args:
         positions (Dict[str, float]): A dictionary where keys are stock symbols and values are their positions.
     """
-    positions.sort(key=lambda x: -x[1])
+    positions_lst = [(i, j) for i, j in positions.items()]
+    positions_lst.sort(key=lambda x: -x[1])
 
-    labels = [i[0] for i in positions]
-    values = [i[1] for i in positions]
+    labels = [i[0] for i in positions_lst]
+    values = [i[1] for i in positions_lst]
 
     fig, ax = plt.subplots(figsize=(10, 6))  # Set facecolor for the whole figure
     fig.set_facecolor("#282b30")

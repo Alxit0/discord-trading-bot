@@ -22,7 +22,7 @@ class User:
         resp['stocks'] = {}
         
         for symbol, data in raw_data['stocks'].items():
-            resp['stocks'][symbol] = Position(data)
+            resp['stocks'][symbol] = Position(symbol, data)
     
         return resp
 
@@ -58,7 +58,3 @@ class User:
     
     def __repr__(self) -> str:
         return self.data.__repr__()
-
-
-    def add_stock(self, value: str):
-        self.stocks[value] = Position()
