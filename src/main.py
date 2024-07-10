@@ -10,6 +10,7 @@ from creds import *
 from apis.yfinance_api import *
 from utils import only_users_allowed
 from database.database import InMemoryDatabase
+from database.position import Position
 
 from view import *
 
@@ -102,6 +103,7 @@ async def view_portfolio(iter: discord.Interaction, member: Optional[discord.Mem
         user_db_info = db.get_user(iter.guild.id, member.id)
 
     user_stocks = list(user_db_info.stocks.values())
+    stock_values = get_stock_position(user_db_info.stocks)
 
     # build message
     position_per_page = 5
@@ -109,7 +111,7 @@ async def view_portfolio(iter: discord.Interaction, member: Optional[discord.Mem
     current_page = 0
 
     def generate_embed(page: int, per_page: int = position_per_page):
-        return create_portfolio_embed(user, user_stocks, page, per_page)
+        return create_portfolio_embed(user, user_stocks, stock_values, page, per_page)
 
     async def update_message(page):
         await iter.edit_original_response(embed=generate_embed(page), view=view)

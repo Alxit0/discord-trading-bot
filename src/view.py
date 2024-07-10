@@ -65,7 +65,7 @@ def create_stock_embed(stock_data: Stock):
     return embed, file
 
 
-def create_portfolio_embed(user: Member, positions: List[Position], page: int, per_page: int):
+def create_portfolio_embed(user: Member, positions: List[Position], stock_values: Dict[str, float], page: int, per_page: int):
     start = page * per_page
     end = start + per_page
     embed = discord.Embed(
@@ -76,14 +76,16 @@ def create_portfolio_embed(user: Member, positions: List[Position], page: int, p
     embed.set_thumbnail(url=user.avatar.url)
 
     for position in positions[start:end]:
+        gain = stock_values[position.symbol] - position.valued_invested
+        
         embed.add_field(
             name=f"{position.symbol}",
             value=f"{position.number_owned:.5f}",
             inline=True
         )
         embed.add_field(
-            name=f"$ ??????",
-            value=f"+$?? (???? %)",
+            name=f"$ {stock_values[position.symbol]:.2f}",
+            value=f"+${gain:.2f} ({gain/position.valued_invested:.2f}%)",
             inline=True
         )
         embed.add_field(name=f"\u200b",value=f"\u200b",inline=True)
