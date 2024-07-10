@@ -9,10 +9,10 @@ from utils import build_history_graph, plot_stock_positions_bar
 
 # typing
 if TYPE_CHECKING:
-    from typing import Dict, List
+    from typing import Dict, List, Tuple
     from database.position import Position
     from database.user import User
-    from discord import Member
+    from discord import Member, Guild
     from utils import Stock
 
 
@@ -90,4 +90,23 @@ def create_portfolio_embed(user: Member, positions: List[Position], stock_values
         )
         embed.add_field(name=f"\u200b",value=f"\u200b",inline=True)
 
+    return embed
+
+
+def create_ranking_embed(guild: Guild, users_networth: List[Tuple[User, float]]):
+    
+    embed = discord.Embed(
+        color=discord.Color.dark_teal(),
+        title=f"{guild.name}'s Ranking",
+        timestamp=datetime.now()
+    )
+
+    for idx, (user, worth) in enumerate(users_networth):
+        user_disc = guild.get_member(user.user_id)
+        embed.add_field(
+            name=f"{idx+1}. {user_disc.display_name}",
+            value=f"$ {worth:.2f}",
+            inline=True
+        )
+        
     return embed

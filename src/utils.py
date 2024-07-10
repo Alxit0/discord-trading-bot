@@ -11,6 +11,8 @@ import matplotlib.colors as mcolors
 import pandas as pd
 import requests
 
+from database.user import User
+
 # classes
 class Stock:
     _image_cache = {}
@@ -225,3 +227,12 @@ def calculate_start_date(range: str):
     elif range.endswith('y'):
         years = int(range[:-1])
         return today.replace() - pd.DateOffset(years=years)
+
+def calculate_portfolios_netwoth(users: List[User], general_stock_values: Dict[str, float]) -> List[Tuple[User, float]]:
+    resp = []
+    
+    for user in users:
+        worth = sum(j.number_owned * general_stock_values[i] for i, j in user.stocks.items()) + user.cash
+        resp.append((user, worth))
+    
+    return resp

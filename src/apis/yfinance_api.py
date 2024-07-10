@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 from functools import wraps
 from forex_python.converter import CurrencyCodes
@@ -37,7 +37,7 @@ def check_stock_validaty(iter_pos: int = 0):
     return decorator
 
 
-# functions
+# stock functions
 def get_stock_data(symbol, range='6mo', *, verbose=False) -> Stock:
     """
     Retrieve historical stock data for a given symbol.
@@ -119,6 +119,22 @@ def get_stock_position(stocks: Dict[str, Position]) -> Dict[str, float]:
         
     return positions
 
+def get_stocks_values(stocks: Iterable[str]) -> Dict[str, float]:
+    
+    resp = {}
+    
+    for symbol in stocks:
+        try:
+            current_price = get_stock_current_value(symbol, currency="USD")
+        except ValueError:
+            continue
+
+        resp[symbol] = current_price
+    
+    return resp
+
+
+# currency funcs
 def get_symbol_suggestions(symbol: str) -> List[str]:
     """
     Fetches symbol suggestions from Yahoo Finance API based on the provided symbol.

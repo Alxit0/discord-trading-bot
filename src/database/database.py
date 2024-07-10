@@ -1,7 +1,8 @@
 import json
 from pprint import pprint
-from typing import Dict
+from typing import Dict, List
 
+from database.user import User
 from utils import default_data_file
 
 from .guild import Guild
@@ -36,6 +37,18 @@ class InMemoryDatabase:
 
     def display_all(self):
         pprint(self.data)
+
+    def get_guild_users(self, guild_id: int) -> List[User]:
+        return list(self.get_guild(guild_id).data.values())
+
+    def get_guild(self, guild_id: int) -> Guild:
+        guild_id = hex(guild_id)
+        
+        # check if the guild exists
+        if guild_id not in self.data:
+            self.data[guild_id] = Guild(guild_id)
+        
+        return self.data[guild_id]
 
     def get_user(self, guild_id: int, auther_id: int):
         

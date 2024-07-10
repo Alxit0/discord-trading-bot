@@ -1,5 +1,6 @@
 import atexit
 import math
+from pprint import pprint
 from typing import Optional
 import discord
 from discord import app_commands
@@ -8,7 +9,7 @@ from discord.ui import Button, View
 
 from creds import *
 from apis.yfinance_api import *
-from utils import only_users_allowed
+from utils import only_users_allowed, calculate_portfolios_netwoth
 from database.database import InMemoryDatabase
 from database.position import Position
 
@@ -144,6 +145,30 @@ async def view_portfolio(iter: discord.Interaction, member: Optional[discord.Mem
     embed = generate_embed(current_page)
     
     await iter.followup.send(embed=embed, view=view)
+
+
+@client.tree.command(name='ranking')
+@only_users_allowed()
+async def guild_ranking(iter: discord.Interaction):
+    """Show server members ranking"""
+    
+    # Acknowledge the interaction immediately
+    await iter.response.defer()
+    
+    # pull relevant info
+    guild_users = db.get_guild_users(iter.guild_id)  # users
+    all_stocks = set()  # all stocks in the server
+    for i in guild_users:
+        all_stocks.update(i.stocks.keys())
+        
+    # calcs
+    general_stock_values = get_stocks_values(all_stocks)
+    users_networth = calculate_portfolios_netwoth(guild_users, general_stock_values)
+    
+    
+    embed = create_ranking_embed(iter.guild, users_networth)
+    
+    await iter.followup.send(embed=embed)
 
 
 class BuyGroup(app_commands.Group):
