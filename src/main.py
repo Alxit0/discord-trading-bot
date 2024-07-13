@@ -1,6 +1,5 @@
 import atexit
 import math
-from pprint import pprint
 from typing import Optional
 import discord
 from discord import app_commands
