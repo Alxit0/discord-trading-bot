@@ -6,12 +6,12 @@ from forex_python.converter import CurrencyCodes
 import discord
 import pandas as pd
 import requests
+from utils import Stock
 import yfinance as yf
 
 if TYPE_CHECKING:
     from typing import Dict, List
     from database.position import Position
-    from utils import Stock
 
 # decorators
 def check_stock_validaty(iter_pos: int = 0):
