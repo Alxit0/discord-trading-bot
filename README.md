@@ -16,7 +16,7 @@ Visit [Trading Game](https://discord.gg/zanbJqyHW4) **discord server** to try ou
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - A Discord bot token. You can create a bot and get a token from the [Discord Developer Portal](https://discord.com/developers/applications).
 
 ### Setup
