@@ -162,6 +162,6 @@ cython_debug/
 # costum stuff
 */*.out
 symbols.json
-*/data.json
+data.json
 temp*
 .DS_Store
