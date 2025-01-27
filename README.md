@@ -1,8 +1,6 @@
 # Discord Stock Trading Bot
 
-This is a Discord bot that allows users to buy and sell stocks, view their profiles and portfolios, and check the ranking of the richest members in the server. It leverages the Discord API, yfinance API for stock data, and an in-memory database to manage user data.
-
-Visit [Trading Game](https://discord.gg/zanbJqyHW4) **discord server** to try out the bot. 
+This is a Discord bot that allows users to buy and sell stocks, view their profiles and portfolios, and check the ranking of the richest members in the server. It leverages the Discord API, yfinance API for stock data, and an in-memory database to manage user data
 
 ## Features
 
